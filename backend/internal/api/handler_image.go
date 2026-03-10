@@ -17,7 +17,6 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check DST server version
 	dstVersion := ""
 	versionFile := filepath.Join(h.dataDir, "dst_server", "version.txt")
 	if data, err := os.ReadFile(versionFile); err == nil {
@@ -36,10 +35,11 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Show update button if DepotDownloader is available (macOS mode)
-	// or if DST is already host-mounted
+	// Show Install/Update DST button if brew is available (can auto-install DepotDownloader)
+	// or if DepotDownloader is already installed, or if DST is already host-mounted
+	_, brewErr := exec.LookPath("brew")
 	_, depotErr := exec.LookPath("DepotDownloader")
-	needsManualUpdate := dstInstalled || depotErr == nil
+	needsManualUpdate := dstInstalled || depotErr == nil || brewErr == nil
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"imageExists":       exists,
@@ -50,13 +50,11 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) BuildImage(w http.ResponseWriter, r *http.Request) {
-	// Try multiple locations for docker directory
 	dockerDir := ""
 	candidates := []string{
-		filepath.Join(h.dataDir, "..", "docker"),    // dev mode: data/../docker
-		filepath.Join(h.dataDir, "docker"),           // if copied to data dir
+		filepath.Join(h.dataDir, "..", "docker"),
+		filepath.Join(h.dataDir, "docker"),
 	}
-	// Check executable directory (for .app bundle)
 	if exe, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "..", "..", "..", "docker"))
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "docker"))
@@ -90,11 +88,40 @@ func (h *Handler) BuildImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
-	// Check if DepotDownloader is available (macOS mode)
 	depotPath, err := exec.LookPath("DepotDownloader")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "DepotDownloader not found. On macOS run: brew install SteamRE/tools/depotdownloader")
-		return
+		// Auto-install DepotDownloader via Homebrew
+		brewPath, brewErr := exec.LookPath("brew")
+		if brewErr != nil {
+			writeError(w, http.StatusBadRequest, "Homebrew not found. Install from https://brew.sh")
+			return
+		}
+
+		log.Println("DepotDownloader not found, installing via Homebrew...")
+
+		// brew tap + install
+		tapCmd := exec.CommandContext(r.Context(), brewPath, "tap", "steamre/tools")
+		tapOut, tapErr := tapCmd.CombinedOutput()
+		log.Printf("brew tap: %s", string(tapOut))
+
+		installCmd := exec.CommandContext(r.Context(), brewPath, "install", "depotdownloader")
+		installOut, installErr := installCmd.CombinedOutput()
+		log.Printf("brew install: %s", string(installOut))
+
+		if tapErr != nil || installErr != nil {
+			errMsg := fmt.Sprintf("Failed to install DepotDownloader.\ntap: %v\ninstall: %v\n%s\n%s",
+				tapErr, installErr, string(tapOut), string(installOut))
+			writeError(w, http.StatusInternalServerError, errMsg)
+			return
+		}
+
+		// Find the newly installed binary
+		depotPath, err = exec.LookPath("DepotDownloader")
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "DepotDownloader installed but not found in PATH")
+			return
+		}
+		log.Printf("DepotDownloader installed at: %s", depotPath)
 	}
 
 	dstDir := filepath.Join(h.dataDir, "dst_server")
@@ -114,7 +141,6 @@ func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
 	} else {
 		logEntry += "\nSUCCESS\n"
 	}
-	// Append to log file
 	logFile, logErr := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if logErr == nil {
 		logFile.WriteString(logEntry)

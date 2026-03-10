@@ -75,8 +75,6 @@ func onReady() {
 	mDocker.Disable()
 	mBrew := systray.AddMenuItem("Homebrew: checking...", "")
 	mBrew.Disable()
-	mDepot := systray.AddMenuItem("DepotDownloader: checking...", "")
-	mDepot.Disable()
 
 	systray.AddSeparator()
 
@@ -98,17 +96,10 @@ func onReady() {
 			mBrew.SetTitle("Homebrew: ✗ not found")
 		}
 
-		depotOk := findBinary("DepotDownloader") != ""
-		if depotOk {
-			mDepot.SetTitle("DepotDownloader: ✓ installed")
-		} else {
-			mDepot.SetTitle("DepotDownloader: ✗ not found")
-		}
-
 		if dockerOk {
-			mStatus.SetTitle("Ready — Docker available")
+			mStatus.SetTitle("Ready")
 		} else {
-			mStatus.SetTitle("Docker required — install Docker first")
+			mStatus.SetTitle("Missing: Docker or Homebrew")
 		}
 	}()
 
