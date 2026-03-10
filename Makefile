@@ -27,12 +27,16 @@ release: frontend
 	cp frontend/public/icon.png "dist/DST DS Panel.app/Contents/Resources/icon.png"
 	cp config.example.json "dist/DST DS Panel.app/Contents/MacOS/config.example.json"
 	printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>CFBundleExecutable</key>\n\t<string>dst-ds-panel-tray</string>\n\t<key>CFBundleIdentifier</key>\n\t<string>com.dst-ds-panel</string>\n\t<key>CFBundleName</key>\n\t<string>DST DS Panel</string>\n\t<key>CFBundleVersion</key>\n\t<string>1.0.0</string>\n\t<key>LSUIElement</key>\n\t<true/>\n\t<key>CFBundleIconFile</key>\n\t<string>icon</string>\n</dict>\n</plist>' > "dist/DST DS Panel.app/Contents/Info.plist"
+	xattr -cr "dist/DST DS Panel.app" 2>/dev/null || true
 	cd dist && zip -r "DST.DS.Panel.app.zip" "DST DS Panel.app"
 	@echo "Release artifacts in dist/:"
 	@echo "  dst-ds-panel-darwin-arm64"
 	@echo "  dst-ds-panel-darwin-amd64"
 	@echo "  dst-ds-panel-linux-amd64"
 	@echo "  DST.DS.Panel.app.zip"
+	@echo ""
+	@echo "Note: If macOS shows 'damaged' warning after unzip, run:"
+	@echo "  xattr -cr '/Applications/DST DS Panel.app'"
 
 # macOS menu bar tray app
 tray:
