@@ -49,7 +49,14 @@
 
 **方式 A：macOS App（推荐）**
 
-从 [Releases](../../releases) 页面下载 `DST.DS.Panel.app.zip`，解压后拖到 `/Applications`。双击启动，作为菜单栏应用运行，一键启停服务器。
+从 [Releases](../../releases) 页面下载 `DST.DS.Panel.app.zip`，解压后拖到 `/Applications`。
+
+如果 macOS 提示"已损坏"，运行：
+```bash
+xattr -cr "/Applications/DST DS Panel.app"
+```
+
+双击启动，作为菜单栏应用运行，一键启停服务器。
 
 **方式 B：二进制文件**
 

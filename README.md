@@ -48,7 +48,14 @@
 
 **Option A: macOS App (Recommended)**
 
-Download `DST.DS.Panel.app.zip` from the [Releases](../../releases) page, unzip, and drag to `/Applications`. Double-click to launch — it runs as a menu bar app with one-click server start/stop.
+Download `DST.DS.Panel.app.zip` from the [Releases](../../releases) page, unzip, and drag to `/Applications`.
+
+If macOS shows "damaged" warning, run:
+```bash
+xattr -cr "/Applications/DST DS Panel.app"
+```
+
+Double-click to launch — it runs as a menu bar app with one-click server start/stop.
 
 **Option B: Binary**
 
