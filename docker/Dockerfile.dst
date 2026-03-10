@@ -1,0 +1,24 @@
+FROM --platform=linux/amd64 debian:bookworm-slim
+
+# Install DST server runtime dependencies
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        locales \
+        libstdc++6 \
+        libgcc-s1 \
+        libcurl3-gnutls \
+        libcurl4 && \
+    locale-gen en_US.UTF-8 && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+RUN mkdir -p /opt/dst_server /root/.klei/DoNotStarveTogether \
+    /root/.steam/steam/steamapps /root/Steam/steamapps/workshop \
+    /opt/dst_server/steamapps/workshop
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

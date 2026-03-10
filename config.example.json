@@ -1,0 +1,13 @@
+{
+  "port": "8080",
+  "dataDir": "./data",
+  "imageName": "dst-server:latest",
+  "platform": "linux/amd64",
+  "auth": {
+    "username": "admin",
+    "password": "change-me",
+    "secret": "generate-a-random-string-here"
+  },
+  "backupInterval": 0,
+  "discordWebhook": ""
+}

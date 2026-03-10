@@ -1,0 +1,236 @@
+{
+  "optionTypes": {
+    "frequency": [
+      { "value": "never", "label": "Never" },
+      { "value": "rare", "label": "Rare" },
+      { "value": "default", "label": "Default" },
+      { "value": "often", "label": "Often" },
+      { "value": "always", "label": "Always" }
+    ],
+    "amount": [
+      { "value": "never", "label": "None" },
+      { "value": "rare", "label": "Less" },
+      { "value": "default", "label": "Default" },
+      { "value": "often", "label": "More" },
+      { "value": "always", "label": "Lots" }
+    ],
+    "season": [
+      { "value": "noseason", "label": "None" },
+      { "value": "veryshortseason", "label": "Very Short" },
+      { "value": "shortseason", "label": "Short" },
+      { "value": "default", "label": "Default" },
+      { "value": "longseason", "label": "Long" },
+      { "value": "verylongseason", "label": "Very Long" }
+    ],
+    "day": [
+      { "value": "default", "label": "Default" },
+      { "value": "longday", "label": "Long Day" },
+      { "value": "longdusk", "label": "Long Dusk" },
+      { "value": "longnight", "label": "Long Night" },
+      { "value": "noday", "label": "No Day" },
+      { "value": "nodusk", "label": "No Dusk" },
+      { "value": "nonight", "label": "No Night" },
+      { "value": "onlyday", "label": "Only Day" },
+      { "value": "onlydusk", "label": "Only Dusk" },
+      { "value": "onlynight", "label": "Only Night" }
+    ],
+    "startSeason": [
+      { "value": "default", "label": "Autumn" },
+      { "value": "winter", "label": "Winter" },
+      { "value": "spring", "label": "Spring" },
+      { "value": "summer", "label": "Summer" },
+      { "value": "autumn|spring", "label": "Autumn or Spring" },
+      { "value": "winter|summer", "label": "Winter or Summer" }
+    ],
+    "worldSize": [
+      { "value": "small", "label": "Small" },
+      { "value": "medium", "label": "Medium" },
+      { "value": "default", "label": "Default" },
+      { "value": "huge", "label": "Huge" }
+    ],
+    "event": [
+      { "value": "default", "label": "Default" },
+      { "value": "enabled", "label": "Enabled" },
+      { "value": "disabled", "label": "Disabled" }
+    ],
+    "toggle": [
+      { "value": "none", "label": "Disabled" },
+      { "value": "always", "label": "Enabled" }
+    ],
+    "resetTime": [
+      { "value": "none", "label": "Never" },
+      { "value": "slow", "label": "Slow" },
+      { "value": "default", "label": "Default" },
+      { "value": "fast", "label": "Fast" }
+    ],
+    "specialEvent": [
+      { "value": "default", "label": "Auto" },
+      { "value": "none", "label": "None" },
+      { "value": "hallowed_nights", "label": "Hallowed Nights" },
+      { "value": "winters_feast", "label": "Winter's Feast" },
+      { "value": "year_of_the_gobbler", "label": "Year of Gobbler" },
+      { "value": "year_of_the_varg", "label": "Year of Varg" },
+      { "value": "year_of_the_pig", "label": "Year of Pig" },
+      { "value": "year_of_the_carrat", "label": "Year of Carrat" },
+      { "value": "year_of_the_beefalo", "label": "Year of Beefalo" },
+      { "value": "year_of_the_catcoon", "label": "Year of Catcoon" }
+    ]
+  },
+  "categories": [
+    {
+      "name": "World",
+      "settings": [
+        { "key": "world_size", "label": "World Size", "type": "worldSize", "locked": true },
+        { "key": "season_start", "label": "Starting Season", "type": "startSeason" },
+        { "key": "day", "label": "Day Type", "type": "day" },
+        { "key": "autumn", "label": "Autumn", "type": "season" },
+        { "key": "winter", "label": "Winter", "type": "season" },
+        { "key": "spring", "label": "Spring", "type": "season" },
+        { "key": "summer", "label": "Summer", "type": "season" },
+        { "key": "weather", "label": "Rain", "type": "frequency" },
+        { "key": "lightning", "label": "Lightning", "type": "frequency" },
+        { "key": "frograin", "label": "Frog Rain", "type": "frequency" },
+        { "key": "wildfires", "label": "Wildfires", "type": "frequency" }
+      ]
+    },
+    {
+      "name": "Resources",
+      "settings": [
+        { "key": "grass", "label": "Grass", "type": "amount" },
+        { "key": "sapling", "label": "Saplings", "type": "amount" },
+        { "key": "trees", "label": "Trees", "type": "amount" },
+        { "key": "flint", "label": "Flint", "type": "amount" },
+        { "key": "rock", "label": "Rocks", "type": "amount" },
+        { "key": "berrybush", "label": "Berry Bushes", "type": "amount" },
+        { "key": "carrot", "label": "Carrots", "type": "amount" },
+        { "key": "mushroom", "label": "Mushrooms", "type": "amount" },
+        { "key": "reeds", "label": "Reeds", "type": "amount" },
+        { "key": "flowers", "label": "Flowers", "type": "amount" },
+        { "key": "cactus", "label": "Cactus", "type": "amount" }
+      ]
+    },
+    {
+      "name": "Creatures",
+      "settings": [
+        { "key": "beefalo", "label": "Beefalo", "type": "amount" },
+        { "key": "pigs", "label": "Pigs", "type": "amount" },
+        { "key": "rabbits", "label": "Rabbits", "type": "amount" },
+        { "key": "birds", "label": "Birds", "type": "amount" },
+        { "key": "butterfly", "label": "Butterflies", "type": "amount" },
+        { "key": "catcoon", "label": "Catcoons", "type": "amount" },
+        { "key": "moles", "label": "Moleworms", "type": "amount" },
+        { "key": "perd", "label": "Gobblers", "type": "amount" },
+        { "key": "tallbirds", "label": "Tallbirds", "type": "amount" },
+        { "key": "penguins", "label": "Penguins", "type": "amount" },
+        { "key": "lightninggoat", "label": "Volt Goats", "type": "amount" }
+      ]
+    },
+    {
+      "name": "Monsters",
+      "settings": [
+        { "key": "spiders", "label": "Spiders", "type": "amount" },
+        { "key": "hounds", "label": "Hounds", "type": "frequency" },
+        { "key": "tentacles", "label": "Tentacles", "type": "amount" },
+        { "key": "lureplants", "label": "Lureplants", "type": "amount" },
+        { "key": "walrus", "label": "MacTusk", "type": "amount" },
+        { "key": "merm", "label": "Merms", "type": "amount" },
+        { "key": "mosquitos", "label": "Mosquitos", "type": "amount" },
+        { "key": "frogs", "label": "Frogs", "type": "amount" },
+        { "key": "bees", "label": "Bees", "type": "amount" },
+        { "key": "krampus", "label": "Krampus", "type": "frequency" }
+      ]
+    },
+    {
+      "name": "Giants & Bosses",
+      "settings": [
+        { "key": "deerclops", "label": "Deerclops", "type": "frequency" },
+        { "key": "bearger", "label": "Bearger", "type": "frequency" },
+        { "key": "goosemoose", "label": "Moose/Goose", "type": "frequency" },
+        { "key": "dragonfly", "label": "Dragonfly", "type": "frequency" },
+        { "key": "beequeen", "label": "Bee Queen", "type": "frequency" },
+        { "key": "klaus", "label": "Klaus", "type": "frequency" },
+        { "key": "malbatross", "label": "Malbatross", "type": "frequency" },
+        { "key": "crabking", "label": "Crab King", "type": "frequency" },
+        { "key": "spiderqueen", "label": "Spider Queen", "type": "frequency" }
+      ]
+    },
+    {
+      "name": "Global",
+      "settings": [
+        { "key": "regrowth", "label": "Regrowth", "type": "frequency" },
+        { "key": "ghostenabled", "label": "Ghost Players", "type": "toggle" },
+        { "key": "portalresurection", "label": "Portal Resurrection", "type": "toggle" },
+        { "key": "resettime", "label": "Auto-Reset", "type": "resetTime" },
+        { "key": "hunger", "label": "Hunger", "type": "frequency" },
+        { "key": "darkness", "label": "Darkness", "type": "frequency" },
+        { "key": "healthpenalty", "label": "Health Penalty", "type": "toggle" }
+      ]
+    },
+    {
+      "name": "Events & Festivals",
+      "settings": [
+        { "key": "specialevent", "label": "Special Event", "type": "specialEvent" },
+        { "key": "hallowed_nights", "label": "Hallowed Nights", "type": "event" },
+        { "key": "winters_feast", "label": "Winter's Feast", "type": "event" },
+        { "key": "year_of_the_beefalo", "label": "Year of Beefalo", "type": "event" },
+        { "key": "year_of_the_carrat", "label": "Year of Carrat", "type": "event" },
+        { "key": "year_of_the_catcoon", "label": "Year of Catcoon", "type": "event" },
+        { "key": "year_of_the_dragonfly", "label": "Year of Dragonfly", "type": "event" },
+        { "key": "year_of_the_pig", "label": "Year of Pig", "type": "event" },
+        { "key": "year_of_the_varg", "label": "Year of Varg", "type": "event" },
+        { "key": "year_of_the_gobbler", "label": "Year of Gobbler", "type": "event" },
+        { "key": "year_of_the_bunnyman", "label": "Year of Bunnyman", "type": "event" },
+        { "key": "crow_carnival", "label": "Crow Carnival", "type": "event" },
+        { "key": "stageplays", "label": "Stage Plays", "type": "event" }
+      ]
+    }
+  ],
+  "presets": {
+    "easy": {
+      "autumn": "longseason", "winter": "shortseason", "spring": "longseason", "summer": "shortseason",
+      "grass": "often", "sapling": "often", "trees": "often", "flint": "often", "rock": "often",
+      "berrybush": "often", "carrot": "often", "flowers": "often",
+      "beefalo": "often", "pigs": "often", "rabbits": "often",
+      "spiders": "rare", "hounds": "rare", "tentacles": "rare",
+      "deerclops": "rare", "bearger": "rare", "goosemoose": "rare", "dragonfly": "rare",
+      "hunger": "rare", "darkness": "rare",
+      "ghostenabled": "always", "portalresurection": "always", "healthpenalty": "none",
+      "regrowth": "always", "weather": "rare", "wildfires": "never"
+    },
+    "normal": {
+      "autumn": "default", "winter": "default", "spring": "default", "summer": "default",
+      "grass": "default", "sapling": "default", "trees": "default", "flint": "default", "rock": "default",
+      "berrybush": "default", "carrot": "default", "flowers": "default",
+      "beefalo": "default", "pigs": "default", "rabbits": "default",
+      "spiders": "default", "hounds": "default", "tentacles": "default",
+      "deerclops": "default", "bearger": "default", "goosemoose": "default", "dragonfly": "default",
+      "hunger": "default", "darkness": "default",
+      "ghostenabled": "always", "portalresurection": "none", "healthpenalty": "always",
+      "regrowth": "default", "weather": "default", "wildfires": "default"
+    },
+    "hard": {
+      "autumn": "shortseason", "winter": "longseason", "spring": "shortseason", "summer": "longseason",
+      "grass": "rare", "sapling": "rare", "flint": "rare", "rock": "rare",
+      "berrybush": "rare", "carrot": "rare",
+      "spiders": "often", "hounds": "often", "tentacles": "often",
+      "deerclops": "often", "bearger": "often", "goosemoose": "often", "dragonfly": "often",
+      "hunger": "often", "darkness": "often",
+      "ghostenabled": "always", "portalresurection": "none", "healthpenalty": "always",
+      "regrowth": "rare", "weather": "often", "wildfires": "often"
+    },
+    "challenge": {
+      "autumn": "veryshortseason", "winter": "verylongseason", "spring": "veryshortseason", "summer": "verylongseason",
+      "grass": "rare", "sapling": "rare", "trees": "rare", "flint": "rare", "rock": "rare",
+      "berrybush": "rare", "carrot": "rare", "mushroom": "rare", "reeds": "rare",
+      "beefalo": "rare", "pigs": "rare", "rabbits": "rare",
+      "spiders": "always", "hounds": "always", "tentacles": "often", "lureplants": "often",
+      "krampus": "often", "mosquitos": "often", "frogs": "often",
+      "deerclops": "always", "bearger": "always", "goosemoose": "always", "dragonfly": "always",
+      "beequeen": "always", "klaus": "always", "spiderqueen": "always",
+      "hunger": "always", "darkness": "always",
+      "ghostenabled": "none", "portalresurection": "none", "healthpenalty": "always",
+      "regrowth": "never", "weather": "always", "wildfires": "always",
+      "frograin": "always", "lightning": "always"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+[Unit]
+Description=DST DS Panel - Don't Starve Together Server Manager
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=dst
+Group=dst
+WorkingDirectory=/opt/dst-ds-panel
+ExecStart=/opt/dst-ds-panel/dst-ds-panel
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment overrides (optional)
+# Environment=PORT=8080
+# Environment=AUTH_USERNAME=admin
+# Environment=AUTH_PASSWORD=your-password
+# Environment=AUTH_SECRET=your-secret
+
+[Install]
+WantedBy=multi-user.target

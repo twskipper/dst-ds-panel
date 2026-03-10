@@ -1,0 +1,32 @@
+FROM debian:bookworm-slim
+
+# Install SteamCMD and DST server dependencies
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        locales \
+        lib32gcc-s1 \
+        libstdc++6 \
+        libstdc++6:i386 \
+        libgcc-s1:i386 \
+        libcurl3-gnutls \
+        libcurl4-gnutls-dev:i386 \
+        curl \
+        ca-certificates && \
+    locale-gen en_US.UTF-8 && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# Install SteamCMD
+RUN mkdir -p /opt/steamcmd && \
+    curl -sqL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" \
+        | tar xzf - -C /opt/steamcmd
+
+RUN mkdir -p /opt/dst_server /root/.klei/DoNotStarveTogether
+
+COPY entrypoint-linux.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
