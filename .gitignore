@@ -2,6 +2,7 @@ data/
 frontend/node_modules/
 frontend/dist/
 backend/dst-ds-panel
+backend/dst-ds-panel-tray
 backend/server
 backend/cmd/server/frontend/
 backend/cmd/server/world-settings.json
