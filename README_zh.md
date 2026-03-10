@@ -49,7 +49,7 @@
 
 **方式 A：macOS App（推荐）**
 
-从 [Releases](../../releases) 页面下载 `DST.DS.Panel.app.zip`，解压后拖到 `/Applications`。
+从 [Releases](../../releases) 页面下载 `DST.DS.Panel.dmg`，打开后拖到 `/Applications`。
 
 如果 macOS 提示"已损坏"，运行：
 ```bash
