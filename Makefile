@@ -7,14 +7,12 @@ DST_REPO = twskipper/dst-ds-runtime
 build: frontend
 	rm -rf backend/cmd/server/frontend
 	cp -r frontend/dist backend/cmd/server/frontend
-	cp frontend/public/world-settings.json backend/cmd/server/world-settings.json
 	cd backend && go build -o dst-ds-panel ./cmd/server
 
 # Cross-compile release binaries + macOS app bundle
 release: frontend
 	rm -rf backend/cmd/server/frontend dist
 	cp -r frontend/dist backend/cmd/server/frontend
-	cp frontend/public/world-settings.json backend/cmd/server/world-settings.json
 	mkdir -p dist
 	cd backend && GOOS=darwin GOARCH=arm64 go build -o ../dist/dst-ds-panel-darwin-arm64 ./cmd/server
 	cd backend && GOOS=darwin GOARCH=amd64 go build -o ../dist/dst-ds-panel-darwin-amd64 ./cmd/server
@@ -32,6 +30,8 @@ release: frontend
 	mkdir -p dist/dmg-staging
 	cp -r "dist/DST DS Panel.app" dist/dmg-staging/
 	ln -s /Applications dist/dmg-staging/Applications
+	cp deploy/README-DMG.txt dist/dmg-staging/README.txt
+	cp deploy/fix-permissions.command dist/dmg-staging/Fix\ Permissions.command
 	hdiutil create -volname "DST DS Panel" -srcfolder dist/dmg-staging -ov -format UDZO "dist/DST DS Panel.dmg"
 	rm -rf dist/dmg-staging
 	@echo "Release artifacts in dist/:"

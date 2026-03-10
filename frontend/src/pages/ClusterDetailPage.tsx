@@ -13,7 +13,6 @@ import { FileEditor } from "@/components/FileEditor"
 import { AdminList } from "@/components/AdminList"
 import { ServerConsole } from "@/components/ServerConsole"
 import { PlayerActivity } from "@/components/PlayerActivity"
-import { WorldSettings } from "@/components/WorldSettings"
 import { useTranslation } from "react-i18next"
 import { api } from "@/lib/api"
 import type { Cluster, Mod } from "@/types"
@@ -130,7 +129,6 @@ export function ClusterDetailPage() {
           <TabsTrigger value="master">{t("tabs.master")}</TabsTrigger>
           <TabsTrigger value="caves">{t("tabs.caves")}</TabsTrigger>
           <TabsTrigger value="console">{t("tabs.console")}</TabsTrigger>
-          <TabsTrigger value="world">{t("tabs.world")}</TabsTrigger>
           <TabsTrigger value="mods">{t("tabs.mods")}</TabsTrigger>
           <TabsTrigger value="files">{t("tabs.files")}</TabsTrigger>
         </TabsList>
@@ -207,25 +205,6 @@ export function ClusterDetailPage() {
                 shard="Master"
                 isRunning={isRunning}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="world" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("world.overworld")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WorldSettings clusterId={cluster.id} shard="Master" />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("world.caves")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WorldSettings clusterId={cluster.id} shard="Caves" />
             </CardContent>
           </Card>
         </TabsContent>
