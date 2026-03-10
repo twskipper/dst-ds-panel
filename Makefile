@@ -1,4 +1,4 @@
-.PHONY: backend frontend docker-build docker-build-linux dst-install dev build release
+.PHONY: backend frontend docker-build docker-build-linux dst-install dev build release tray app
 
 # Build frontend, then embed into Go binary
 build: frontend
@@ -17,6 +17,22 @@ release: frontend
 	cd backend && GOOS=darwin GOARCH=amd64 go build -o ../dist/dst-ds-panel-darwin-amd64 ./cmd/server
 	cd backend && GOOS=linux GOARCH=amd64 go build -o ../dist/dst-ds-panel-linux-amd64 ./cmd/server
 	@echo "Release binaries in dist/"
+
+# macOS menu bar tray app
+tray:
+	cd backend && go build -o dst-ds-panel-tray ./cmd/tray
+
+# macOS .app bundle (tray + server)
+app: build tray
+	rm -rf "dist/DST DS Panel.app"
+	mkdir -p "dist/DST DS Panel.app/Contents/MacOS"
+	mkdir -p "dist/DST DS Panel.app/Contents/Resources"
+	cp backend/dst-ds-panel "dist/DST DS Panel.app/Contents/MacOS/dst-ds-panel"
+	cp backend/dst-ds-panel-tray "dist/DST DS Panel.app/Contents/MacOS/dst-ds-panel-tray"
+	cp frontend/public/icon.png "dist/DST DS Panel.app/Contents/Resources/icon.png"
+	cp config.example.json "dist/DST DS Panel.app/Contents/MacOS/config.example.json"
+	echo '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>CFBundleExecutable</key>\n\t<string>dst-ds-panel-tray</string>\n\t<key>CFBundleIdentifier</key>\n\t<string>com.dst-ds-panel</string>\n\t<key>CFBundleName</key>\n\t<string>DST DS Panel</string>\n\t<key>CFBundleVersion</key>\n\t<string>1.0.0</string>\n\t<key>LSUIElement</key>\n\t<true/>\n\t<key>CFBundleIconFile</key>\n\t<string>icon</string>\n</dict>\n</plist>' > "dist/DST DS Panel.app/Contents/Info.plist"
+	@echo "macOS app bundle created: dist/DST DS Panel.app"
 
 backend:
 	cd backend && go build -o dst-ds-panel ./cmd/server
