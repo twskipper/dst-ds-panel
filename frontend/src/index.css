@@ -6,6 +6,21 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
+  /* Auto-scale for high-DPI displays (4K, 5K) */
+  html {
+    font-size: 16px;
+  }
+  @media (min-resolution: 2dppx) and (min-width: 2560px) {
+    html {
+      font-size: 14px;
+    }
+  }
+  @media (min-resolution: 2dppx) and (min-width: 3840px) {
+    html {
+      font-size: 12px;
+    }
+  }
+
   * {
     @apply border-border outline-ring/50;
   }

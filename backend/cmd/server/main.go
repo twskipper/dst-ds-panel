@@ -93,17 +93,16 @@ func main() {
 	}
 
 	// Resolve data directory
-	// Prefer parent ../data when running from backend/ subdir
 	dataDir, err := filepath.Abs(cfg.DataDir)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if alt, err2 := filepath.Abs(filepath.Join("..", cfg.DataDir)); err2 == nil {
-		// Check if parent data dir has dst_server, clusters, or store.json
-		for _, marker := range []string{"dst_server/bin64", "clusters", "store.json"} {
-			if _, e := os.Stat(filepath.Join(alt, marker)); e == nil {
+	// When running from backend/ subdir during development, check if ../data exists
+	// Only switch if current resolved dataDir has no data yet AND parent does
+	if _, e := os.Stat(dataDir); os.IsNotExist(e) {
+		if alt, err2 := filepath.Abs(filepath.Join("..", cfg.DataDir)); err2 == nil {
+			if _, e2 := os.Stat(alt); e2 == nil {
 				dataDir = alt
-				break
 			}
 		}
 	}
