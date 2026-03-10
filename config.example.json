@@ -1,7 +1,7 @@
 {
   "port": "8080",
   "dataDir": "./data",
-  "imageName": "dst-server:latest",
+  "imageName": "twskipper/dst-ds-runtime:macos",
   "platform": "linux/amd64",
   "auth": {
     "username": "admin",

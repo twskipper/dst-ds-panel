@@ -1,20 +1,25 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
-RUN apk add --no-cache nodejs npm make
+RUN apk add --no-cache nodejs npm make git
 
 WORKDIR /src
 COPY . .
 
-RUN cd frontend && npm install && cd ..
-RUN make build
+RUN cd frontend && npm install && npm run build && cd ..
+RUN rm -rf backend/cmd/server/frontend && \
+    cp -r frontend/dist backend/cmd/server/frontend && \
+    cp frontend/public/world-settings.json backend/cmd/server/world-settings.json && \
+    cd backend && go build -o /dst-ds-panel ./cmd/server
 
 FROM alpine:latest
 
-RUN apk add --no-cache ca-certificates docker-cli
+RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
-COPY --from=builder /src/backend/dst-ds-panel /app/dst-ds-panel
-COPY --from=builder /src/config.json /app/config.json
+COPY --from=builder /dst-ds-panel /app/dst-ds-panel
+COPY config.example.json /app/config.json
 
 EXPOSE 8080
+VOLUME ["/app/data"]
+
 CMD ["/app/dst-ds-panel"]
