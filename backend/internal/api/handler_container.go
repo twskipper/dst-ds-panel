@@ -34,6 +34,12 @@ func (h *Handler) StartCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
+	// Auto-pull runtime image if not present
+	if err := h.docker.EnsureImage(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to pull Docker image: %v", err))
+		return
+	}
 	cluster.Status = model.StatusStarting
 	h.store.SaveCluster(*cluster)
 

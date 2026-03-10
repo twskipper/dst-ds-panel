@@ -51,10 +51,10 @@
 
 从 [Releases](../../releases) 页面下载 `DST.DS.Panel.dmg`，打开后拖到 `/Applications`。
 
-如果 macOS 提示"已损坏"，运行：
-```bash
-xattr -cr "/Applications/DST DS Panel.app"
-```
+如果 macOS 阻止打开，使用以下任一方法：
+- 双击 DMG 中的 `Fix Permissions.command` 脚本
+- 或在终端运行：`xattr -cr "/Applications/DST DS Panel.app"`
+- 或前往 **系统设置 → 隐私与安全性**，找到"DST DS Panel 已被阻止"，点击 **仍要打开**
 
 双击启动，作为菜单栏应用运行，一键启停服务器。
 

@@ -48,7 +48,14 @@
 
 **Option A: macOS App (Recommended)**
 
-Download `DST.DS.Panel.dmg` from the [Releases](../../releases) page, open the DMG, and drag the app to `/Applications`. Double-click to launch — it runs as a menu bar app with one-click server start/stop.
+Download `DST.DS.Panel.dmg` from the [Releases](../../releases) page, open the DMG, and drag the app to `/Applications`.
+
+If macOS blocks the app, use one of these fixes:
+- Double-click `Fix Permissions.command` in the DMG
+- Or run in Terminal: `xattr -cr "/Applications/DST DS Panel.app"`
+- Or go to **System Settings → Privacy & Security**, find "DST DS Panel was blocked", click **Open Anyway**
+
+Double-click to launch — it runs as a menu bar app with one-click server start/stop.
 
 **Option B: Binary**
 
