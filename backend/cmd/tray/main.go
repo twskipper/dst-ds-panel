@@ -43,6 +43,10 @@ func main() {
 		}
 	}
 
+	// Fix PATH for macOS GUI apps (they don't inherit shell PATH)
+	currentPath := os.Getenv("PATH")
+	os.Setenv("PATH", "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:"+currentPath)
+
 	os.Chdir(dataHome)
 	log.Printf("Data directory: %s", dataHome)
 	log.Printf("Binary directory: %s", appDir)
@@ -169,6 +173,10 @@ func startServer() bool {
 	cmd.Dir = cwd
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	// Ensure server process has full PATH (macOS GUI apps have limited PATH)
+	cmd.Env = append(os.Environ(),
+		"PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+	)
 
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to start server: %v", err)

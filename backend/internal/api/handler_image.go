@@ -50,7 +50,27 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) BuildImage(w http.ResponseWriter, r *http.Request) {
-	dockerDir := filepath.Join(h.dataDir, "..", "docker")
+	// Try multiple locations for docker directory
+	dockerDir := ""
+	candidates := []string{
+		filepath.Join(h.dataDir, "..", "docker"),    // dev mode: data/../docker
+		filepath.Join(h.dataDir, "docker"),           // if copied to data dir
+	}
+	// Check executable directory (for .app bundle)
+	if exe, err := os.Executable(); err == nil {
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "..", "..", "..", "docker"))
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "docker"))
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(filepath.Join(c, "Dockerfile.dst")); err == nil {
+			dockerDir = c
+			break
+		}
+	}
+	if dockerDir == "" {
+		writeError(w, http.StatusBadRequest, "Docker files not found. Run 'docker build' manually from project directory.")
+		return
+	}
 
 	cmd := exec.CommandContext(r.Context(), "docker", "build", "-f",
 		filepath.Join(dockerDir, "Dockerfile.dst"), "-t", "dst-server:latest", dockerDir)

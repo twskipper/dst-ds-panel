@@ -1,7 +1,12 @@
 #!/bin/bash
 set -e
 
-DST_DIR="$(cd "$(dirname "$0")/.." && pwd)/data/dst_server"
+# Accept custom path as argument, or use relative to script location
+if [ -n "$1" ]; then
+    DST_DIR="$1"
+else
+    DST_DIR="$(cd "$(dirname "$0")/.." && pwd)/data/dst_server"
+fi
 APP_ID=343050
 
 echo "=== DST Dedicated Server Installer ==="
