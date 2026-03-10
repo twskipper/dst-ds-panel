@@ -5,7 +5,7 @@
   "platform": "linux/amd64",
   "auth": {
     "username": "admin",
-    "password": "change-me",
+    "password": "admin",
     "secret": "generate-a-random-string-here"
   },
   "backupInterval": 0,

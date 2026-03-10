@@ -137,7 +137,7 @@ cp config.example.json config.json
 docker compose up -d
 ```
 
-打开 `http://你的服务器:8080` 登录（默认：admin/change-me）。
+打开 `http://你的服务器:8080` 登录（默认：admin/admin）。
 
 > **注意：** 需要挂载 Docker socket（`/var/run/docker.sock`）以便面板管理 DST 容器。DST 运行时镜像（`twskipper/dst-ds-runtime:linux`）会在首次启动集群时自动拉取。
 

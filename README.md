@@ -91,7 +91,7 @@ Create `config.json` next to the binary:
   "platform": "linux/amd64",
   "auth": {
     "username": "admin",
-    "password": "change-me",
+    "password": "admin",
     "secret": "change-this-to-a-random-string"
   }
 }
@@ -134,7 +134,7 @@ cp config.example.json config.json
 docker compose up -d
 ```
 
-Open `http://your-server:8080` and login (default: admin/change-me).
+Open `http://your-server:8080` and login (default: admin/admin).
 
 > **Note:** Docker socket mount (`/var/run/docker.sock`) is required for the panel to manage DST containers. The DST runtime image (`twskipper/dst-ds-runtime:linux`) will be pulled automatically when you start your first cluster.
 
@@ -174,7 +174,7 @@ Create `config.json` next to the binary:
   "platform": "linux/amd64",
   "auth": {
     "username": "admin",
-    "password": "change-me",
+    "password": "admin",
     "secret": "change-this-to-a-random-string"
   }
 }
