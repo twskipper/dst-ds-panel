@@ -46,7 +46,13 @@
 
 ### Step 1: Download
 
-Download `dst-ds-panel-darwin-arm64` from the [Releases](../../releases) page, or build from source (see [Development](#development)).
+**Option A: macOS App (Recommended)**
+
+Download `DST.DS.Panel.app.zip` from the [Releases](../../releases) page, unzip, and drag to `/Applications`. Double-click to launch — it runs as a menu bar app with one-click server start/stop.
+
+**Option B: Binary**
+
+Download `dst-ds-panel-darwin-arm64` from the [Releases](../../releases) page.
 
 ```bash
 chmod +x dst-ds-panel-darwin-arm64
@@ -91,6 +97,39 @@ Create `config.json` next to the binary:
 ```
 
 Open `http://localhost:8080` and login.
+
+---
+
+## Quick Start — Docker (One Command)
+
+The fastest way to get started on any Linux server:
+
+```bash
+docker run -d \
+  --name dst-ds-panel \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v dst-panel-data:/app/data \
+  -e AUTH_PASSWORD=your-password \
+  -e AUTH_SECRET=your-random-secret \
+  -e DST_IMAGE=twskipper/dst-ds-runtime:linux \
+  --restart unless-stopped \
+  twskipper/dst-ds-panel:latest
+```
+
+Or use Docker Compose:
+
+```bash
+curl -O https://raw.githubusercontent.com/twskipper/dst-ds-panel/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/twskipper/dst-ds-panel/main/config.example.json
+cp config.example.json config.json
+# Edit config.json to set your password and secret
+docker compose up -d
+```
+
+Open `http://your-server:8080` and login (default: admin/change-me).
+
+> **Note:** Docker socket mount (`/var/run/docker.sock`) is required for the panel to manage DST containers. The DST runtime image (`twskipper/dst-ds-runtime:linux`) will be pulled automatically when you start your first cluster.
 
 ---
 

@@ -25,7 +25,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Port:      "8080",
 		DataDir:   "./data",
-		ImageName: "dst-server:latest",
+		ImageName: "twskipper/dst-ds-runtime:macos",
 		Platform:  "linux/amd64",
 		Auth: Auth{
 			Username: "admin",

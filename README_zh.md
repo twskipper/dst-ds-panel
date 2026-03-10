@@ -47,7 +47,13 @@
 
 ### 步骤 1：下载
 
-从 [Releases](../../releases) 页面下载 `dst-ds-panel-darwin-arm64`，或从源码构建（见[开发](#开发)部分）。
+**方式 A：macOS App（推荐）**
+
+从 [Releases](../../releases) 页面下载 `DST.DS.Panel.app.zip`，解压后拖到 `/Applications`。双击启动，作为菜单栏应用运行，一键启停服务器。
+
+**方式 B：二进制文件**
+
+从 [Releases](../../releases) 页面下载 `dst-ds-panel-darwin-arm64`。
 
 ```bash
 chmod +x dst-ds-panel-darwin-arm64
@@ -94,6 +100,39 @@ docker build --platform linux/amd64 -f docker/Dockerfile.dst -t dst-server:lates
 ```
 
 打开 `http://localhost:8080` 登录。
+
+---
+
+## 快速启动 — Docker 一键部署
+
+在任何 Linux 服务器上最快的启动方式：
+
+```bash
+docker run -d \
+  --name dst-ds-panel \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v dst-panel-data:/app/data \
+  -e AUTH_PASSWORD=你的密码 \
+  -e AUTH_SECRET=随机密钥字符串 \
+  -e DST_IMAGE=twskipper/dst-ds-runtime:linux \
+  --restart unless-stopped \
+  twskipper/dst-ds-panel:latest
+```
+
+或使用 Docker Compose：
+
+```bash
+curl -O https://raw.githubusercontent.com/twskipper/dst-ds-panel/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/twskipper/dst-ds-panel/main/config.example.json
+cp config.example.json config.json
+# 编辑 config.json 设置密码
+docker compose up -d
+```
+
+打开 `http://你的服务器:8080` 登录（默认：admin/change-me）。
+
+> **注意：** 需要挂载 Docker socket（`/var/run/docker.sock`）以便面板管理 DST 容器。DST 运行时镜像（`twskipper/dst-ds-runtime:linux`）会在首次启动集群时自动拉取。
 
 ---
 
