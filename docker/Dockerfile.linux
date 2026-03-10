@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM --platform=linux/amd64 debian:bookworm-slim
 
 # Install SteamCMD and DST server dependencies
 RUN dpkg --add-architecture i386 && \
@@ -10,7 +10,7 @@ RUN dpkg --add-architecture i386 && \
         libstdc++6:i386 \
         libgcc-s1:i386 \
         libcurl3-gnutls \
-        libcurl4-gnutls-dev:i386 \
+        libcurl4:i386 \
         curl \
         ca-certificates && \
     locale-gen en_US.UTF-8 && \

@@ -1,7 +1,7 @@
 DOCKER_REPO = twskipper/dst-ds-panel
 DST_REPO = twskipper/dst-ds-runtime
 
-.PHONY: backend frontend docker-build docker-build-linux docker-push dst-install dev build release tray app
+.PHONY: backend frontend docker-build docker-build-linux docker-build-panel docker-push docker-all dst-install dev build release tray app
 
 # Build frontend, then embed into Go binary
 build: frontend
@@ -62,14 +62,14 @@ docker-build:
 
 # Linux amd64: self-contained image with SteamCMD
 docker-build-linux:
-	docker build -f docker/Dockerfile.linux -t $(DST_REPO):linux docker/
+	docker build --platform linux/amd64 -f docker/Dockerfile.linux -t $(DST_REPO):linux docker/
 
 # Panel image (the web app itself)
 docker-build-panel:
 	docker build -f deploy/Dockerfile.panel -t $(DOCKER_REPO):latest .
 
 # Push all images to Docker Hub
-docker-push: docker-build docker-build-linux docker-build-panel
+docker-push:
 	docker push $(DST_REPO):macos
 	docker push $(DST_REPO):linux
 	docker push $(DOCKER_REPO):latest
@@ -77,6 +77,9 @@ docker-push: docker-build docker-build-linux docker-build-panel
 	@echo "  $(DOCKER_REPO):latest          (panel)"
 	@echo "  $(DST_REPO):macos   (DST runtime for macOS)"
 	@echo "  $(DST_REPO):linux   (DST with SteamCMD for Linux)"
+
+# Build all Docker images and push to Docker Hub
+docker-all: docker-build docker-build-linux docker-build-panel docker-push
 
 # macOS only: download/update DST server via DepotDownloader
 dst-install:
