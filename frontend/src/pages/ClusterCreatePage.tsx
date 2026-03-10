@@ -187,6 +187,10 @@ export function ClusterCreatePage() {
                 </div>
               </div>
 
+              <p className="text-xs text-muted-foreground">
+                New clusters use default Survival world settings. For custom world settings, use the Import tab to upload your own save.
+              </p>
+
               <div className="space-y-2">
                 <Label htmlFor="password">Server Password (optional)</Label>
                 <Input

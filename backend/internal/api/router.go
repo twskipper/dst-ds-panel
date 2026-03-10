@@ -28,7 +28,7 @@ func NewHandler(dockerMgr *docker.Manager, store *store.Store, dataDir string) *
 	}
 }
 
-func NewRouter(h *Handler, auth config.Auth, frontendFS fs.FS, worldSettingsJSON []byte) http.Handler {
+func NewRouter(h *Handler, auth config.Auth, frontendFS fs.FS) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -39,12 +39,6 @@ func NewRouter(h *Handler, auth config.Auth, frontendFS fs.FS, worldSettingsJSON
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
-
-	// Serve world-settings.json (public, no auth needed)
-	r.Get("/world-settings.json", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(worldSettingsJSON)
-	})
 
 	authHandler := NewAuthHandler(auth)
 

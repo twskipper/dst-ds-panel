@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"flag"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -21,9 +19,6 @@ import (
 
 //go:embed all:frontend
 var frontendFS embed.FS
-
-//go:embed world-settings.json
-var defaultWorldSettings []byte
 
 func reconcileStatus(dockerMgr *docker.Manager, s *store.Store) {
 	ctx := context.Background()
@@ -58,27 +53,6 @@ func reconcileStatus(dockerMgr *docker.Manager, s *store.Store) {
 }
 
 func main() {
-	// CLI flags
-	dumpWorldSettings := flag.Bool("dump-world-settings", false, "Dump embedded world-settings.json to stdout and exit")
-	worldSettingsFile := flag.String("world-settings", "", "Path to custom world-settings.json file")
-	flag.Parse()
-
-	if *dumpWorldSettings {
-		fmt.Print(string(defaultWorldSettings))
-		os.Exit(0)
-	}
-
-	// Load world settings: custom file or embedded default
-	worldSettingsData := defaultWorldSettings
-	if *worldSettingsFile != "" {
-		data, err := os.ReadFile(*worldSettingsFile)
-		if err != nil {
-			log.Fatalf("Failed to read world settings file: %v", err)
-		}
-		worldSettingsData = data
-		log.Printf("Using custom world settings: %s", *worldSettingsFile)
-	}
-
 	// Load config: try current dir, then parent dir (when run from backend/)
 	configPath := "config.json"
 	if v := os.Getenv("CONFIG_FILE"); v != "" {
@@ -97,8 +71,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// When running from backend/ subdir during development, check if ../data exists
-	// Only switch if current resolved dataDir has no data yet AND parent does
 	if _, e := os.Stat(dataDir); os.IsNotExist(e) {
 		if alt, err2 := filepath.Abs(filepath.Join("..", cfg.DataDir)); err2 == nil {
 			if _, e2 := os.Stat(alt); e2 == nil {
@@ -135,7 +107,7 @@ func main() {
 	}
 
 	h := api.NewHandler(dockerMgr, s, dataDir)
-	router := api.NewRouter(h, cfg.Auth, frontendContent, worldSettingsData)
+	router := api.NewRouter(h, cfg.Auth, frontendContent)
 
 	log.Printf("Config: image=%s platform=%s auth_user=%s", cfg.ImageName, cfg.Platform, cfg.Auth.Username)
 	log.Printf("Data directory: %s", dataDir)
