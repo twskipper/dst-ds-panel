@@ -91,7 +91,7 @@ export function ClusterDetailPage() {
             variant="outline"
             size="sm"
             onClick={() => {
-              window.open(`/api/clusters/${cluster.id}/backup`, "_blank")
+              window.open(`/api/clusters/${cluster.id}/backup?token=${localStorage.getItem("dst_token")}`, "_blank")
             }}
           >
             Backup
