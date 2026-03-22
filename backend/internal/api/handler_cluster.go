@@ -62,19 +62,20 @@ func (h *Handler) CreateCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find non-conflicting ports
-	masterPort, cavesPort := h.findAvailablePorts()
+	serverMaster, serverCaves, shardMasterPort := h.findAvailablePorts()
 
-	// Write ports to server.ini
-	dst.WriteShardPort(filepath.Join(clusterDir, "Master"), masterPort)
+	// Write ports to server.ini and cluster.ini
+	dst.WriteShardPort(filepath.Join(clusterDir, "Master"), serverMaster)
 	if cavesEnabled {
-		dst.WriteShardPort(filepath.Join(clusterDir, "Caves"), cavesPort)
+		dst.WriteShardPort(filepath.Join(clusterDir, "Caves"), serverCaves)
 	}
+	dst.WriteMasterPort(clusterDir, shardMasterPort)
 
 	shards := []model.Shard{
-		{Name: "Master", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: true, ServerPort: masterPort, MasterPort: 27018}},
+		{Name: "Master", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: true, ServerPort: serverMaster, MasterPort: 27018}},
 	}
 	if cavesEnabled {
-		shards = append(shards, model.Shard{Name: "Caves", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: false, ServerPort: cavesPort, MasterPort: 27019}})
+		shards = append(shards, model.Shard{Name: "Caves", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: false, ServerPort: serverCaves, MasterPort: 27019}})
 	}
 
 	cluster := model.Cluster{
@@ -237,6 +238,13 @@ func (h *Handler) GetClusterPorts(w http.ResponseWriter, r *http.Request) {
 		ports[shard.Name] = port
 	}
 
+	// Include master_port from cluster.ini
+	masterPort := dst.ReadMasterPort(clusterDir)
+	if masterPort == 0 {
+		masterPort = 10888
+	}
+	ports["master_port"] = masterPort
+
 	writeJSON(w, http.StatusOK, ports)
 }
 
@@ -261,15 +269,26 @@ func (h *Handler) UpdateClusterPorts(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		otherDir := filepath.Join(h.dataDir, "clusters", other.DirName)
+
+		// Check shard server_port conflicts
 		for _, shard := range other.Shards {
 			otherPort := dst.ReadShardPort(filepath.Join(otherDir, shard.Name))
-			for shardName, newPort := range ports {
+			for _, newPort := range ports {
 				if newPort == otherPort && otherPort != 0 {
 					writeError(w, http.StatusConflict,
 						fmt.Sprintf("Port %d conflicts with %s/%s", newPort, other.Name, shard.Name))
 					return
 				}
-				_ = shardName
+			}
+		}
+
+		// Check master_port conflicts
+		if newMasterPort, ok := ports["master_port"]; ok {
+			otherMasterPort := dst.ReadMasterPort(otherDir)
+			if newMasterPort == otherMasterPort && otherMasterPort != 0 {
+				writeError(w, http.StatusConflict,
+					fmt.Sprintf("Master port %d conflicts with cluster %s", newMasterPort, other.Name))
+				return
 			}
 		}
 	}
@@ -288,6 +307,14 @@ func (h *Handler) UpdateClusterPorts(w http.ResponseWriter, r *http.Request) {
 	// Write ports
 	clusterDir := filepath.Join(h.dataDir, "clusters", cluster.DirName)
 	for shardName, port := range ports {
+		if shardName == "master_port" {
+			// Write master_port to cluster.ini
+			if err := dst.WriteMasterPort(clusterDir, port); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("write master_port: %v", err))
+				return
+			}
+			continue
+		}
 		shardDir := filepath.Join(clusterDir, shardName)
 		if err := dst.WriteShardPort(shardDir, port); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("write %s port: %v", shardName, err))
@@ -539,8 +566,8 @@ func copyDir(src, dst string) error {
 	})
 }
 
-// findAvailablePorts returns a non-conflicting (masterPort, cavesPort) pair.
-func (h *Handler) findAvailablePorts() (int, int) {
+// findAvailablePorts returns non-conflicting (serverPortMaster, serverPortCaves, masterPort).
+func (h *Handler) findAvailablePorts() (int, int, int) {
 	used := make(map[int]bool)
 	clusters := h.store.ListClusters()
 	for _, c := range clusters {
@@ -551,16 +578,27 @@ func (h *Handler) findAvailablePorts() (int, int) {
 				used[port] = true
 			}
 		}
+		mp := dst.ReadMasterPort(clusterDir)
+		if mp > 0 {
+			used[mp] = true
+		}
 	}
 
-	// Start from default ports and find first available pair
-	masterPort := 10999
-	cavesPort := 10998
-	for used[masterPort] || used[cavesPort] {
-		masterPort += 2
-		cavesPort += 2
+	// Find available server ports (default: 10999/10998)
+	serverMaster := 10999
+	serverCaves := 10998
+	for used[serverMaster] || used[serverCaves] {
+		serverMaster += 2
+		serverCaves += 2
 	}
-	return masterPort, cavesPort
+
+	// Find available master_port (default: 10888)
+	masterPort := 10888
+	for used[masterPort] {
+		masterPort++
+	}
+
+	return serverMaster, serverCaves, masterPort
 }
 
 func sanitizeID(name string) string {

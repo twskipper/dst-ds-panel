@@ -269,7 +269,7 @@ function PortConfig({ clusterId, shards }: { clusterId: string; shards: Array<{ 
         <CardTitle>{t("overview.ports")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {shards.map((shard) => (
             <div key={shard.name} className="space-y-1">
               <label className="text-sm font-medium">
@@ -283,6 +283,17 @@ function PortConfig({ clusterId, shards }: { clusterId: string; shards: Array<{ 
               />
             </div>
           ))}
+          <div className="space-y-1">
+            <label className="text-sm font-medium">
+              {t("overview.shardMasterPort")}
+            </label>
+            <input
+              type="number"
+              value={ports["master_port"] || ""}
+              onChange={(e) => setPorts({ ...ports, master_port: parseInt(e.target.value) || 0 })}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+            />
+          </div>
         </div>
         {msg && (
           <p className={`text-sm ${msg.type === "error" ? "text-red-500" : "text-green-600"}`}>

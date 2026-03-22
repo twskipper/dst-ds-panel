@@ -102,7 +102,8 @@
     "savePorts": "Save Ports",
     "savingPorts": "Saving...",
     "portsSaved": "Ports saved. Restart server to apply.",
-    "portConflict": "Port conflict"
+    "portConflict": "Port conflict",
+    "shardMasterPort": "Shard Master Port"
   },
   "console": {
     "title": "Server Console",

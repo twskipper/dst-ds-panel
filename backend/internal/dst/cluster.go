@@ -82,6 +82,27 @@ func WriteClusterConfig(clusterDir string, config *model.ClusterConfig) error {
 	return nil
 }
 
+// ReadMasterPort reads master_port from cluster.ini [SHARD] section
+func ReadMasterPort(clusterDir string) int {
+	cfg, err := ini.Load(filepath.Join(clusterDir, "cluster.ini"))
+	if err != nil {
+		return 0
+	}
+	port, _ := cfg.Section("SHARD").Key("master_port").Int()
+	return port
+}
+
+// WriteMasterPort writes master_port to cluster.ini [SHARD] section
+func WriteMasterPort(clusterDir string, port int) error {
+	iniPath := filepath.Join(clusterDir, "cluster.ini")
+	cfg, err := ini.Load(iniPath)
+	if err != nil {
+		return err
+	}
+	cfg.Section("SHARD").Key("master_port").SetValue(strconv.Itoa(port))
+	return cfg.SaveTo(iniPath)
+}
+
 // ReadShardPort reads server_port from a shard's server.ini
 func ReadShardPort(shardDir string) int {
 	cfg, err := ini.Load(filepath.Join(shardDir, "server.ini"))
