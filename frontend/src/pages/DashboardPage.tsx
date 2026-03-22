@@ -17,6 +17,7 @@ export function DashboardPage() {
   const [dstStatus, setDstStatus] = useState<{ dstInstalled: boolean; dstVersion: string; needsManualUpdate: boolean } | null>(null)
   const [updating, setUpdating] = useState(false)
   const [updateMsg, setUpdateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [betaVersion, setBetaVersion] = useState("")
 
   const fetchClusters = async () => {
     try {
@@ -50,7 +51,7 @@ export function DashboardPage() {
     setUpdating(true)
     setUpdateMsg(null)
     try {
-      await api.updateDST()
+      await api.updateDST(betaVersion.trim() || undefined)
       setUpdateMsg({ type: "success", text: "DST server updated successfully. Restart running clusters to use the new version." })
       fetchStatus()
     } catch (err) {
@@ -85,17 +86,26 @@ export function DashboardPage() {
         </div>
         <div className="flex gap-2">
           {dstStatus?.needsManualUpdate && (
-            <Button
-              variant="outline"
-              onClick={handleUpdateDST}
-              disabled={updating}
-            >
-              {updating
-                ? t("dashboard.updatingDST")
-                : dstStatus?.dstInstalled
-                  ? t("dashboard.updateDST")
-                  : t("dashboard.installDST")}
-            </Button>
+            <>
+              <input
+                type="text"
+                placeholder={t("dashboard.betaPlaceholder")}
+                value={betaVersion}
+                onChange={(e) => setBetaVersion(e.target.value)}
+                className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm"
+              />
+              <Button
+                variant="outline"
+                onClick={handleUpdateDST}
+                disabled={updating}
+              >
+                {updating
+                  ? t("dashboard.updatingDST")
+                  : dstStatus?.dstInstalled
+                    ? t("dashboard.updateDST")
+                    : t("dashboard.installDST")}
+              </Button>
+            </>
           )}
           <Button onClick={() => navigate("/clusters/new")}>{t("dashboard.newCluster")}</Button>
         </div>

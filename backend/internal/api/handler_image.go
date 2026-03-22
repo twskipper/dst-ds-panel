@@ -124,13 +124,19 @@ func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
 		log.Printf("DepotDownloader installed at: %s", depotPath)
 	}
 
+	beta := r.URL.Query().Get("beta")
+
 	dstDir := filepath.Join(h.dataDir, "dst_server")
 	os.MkdirAll(dstDir, 0755)
 
 	logPath := filepath.Join(h.dataDir, "install-dst.log")
-	log.Printf("Updating DST server via DepotDownloader (log: %s)", logPath)
+	log.Printf("Updating DST server via DepotDownloader (beta=%s, log: %s)", beta, logPath)
 
-	cmd := exec.CommandContext(r.Context(), depotPath, "-app", "343050", "-os", "linux", "-dir", dstDir)
+	args := []string{"-app", "343050", "-os", "linux", "-dir", dstDir}
+	if beta != "" {
+		args = append(args, "-beta", beta)
+	}
+	cmd := exec.CommandContext(r.Context(), depotPath, args...)
 	output, err := cmd.CombinedOutput()
 
 	// Write log file

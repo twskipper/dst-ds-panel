@@ -26,7 +26,8 @@
     "totalClusters": "Total Clusters",
     "running": "Running",
     "stopped": "Stopped",
-    "totalShards": "Total Shards"
+    "totalShards": "Total Shards",
+    "betaPlaceholder": "Version (e.g. 719036)"
   },
   "cluster": {
     "back": "Back",

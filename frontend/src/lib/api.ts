@@ -84,7 +84,7 @@ export const api = {
 
   buildImage: () => request<{ status: string; output: string }>("/image/build", { method: "POST" }),
 
-  updateDST: () => request<{ status: string; output: string }>("/dst/update", { method: "POST" }),
+  updateDST: (beta?: string) => request<{ status: string; output: string }>(`/dst/update${beta ? `?beta=${beta}` : ""}`, { method: "POST" }),
 
   sendCommand: (id: string, shard: string, command: string) =>
     request<{ status: string; command: string }>(
