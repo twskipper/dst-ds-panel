@@ -35,6 +35,12 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	dstBranch := ""
+	branchFile := filepath.Join(h.dataDir, "dst_server", "branch.txt")
+	if data, err := os.ReadFile(branchFile); err == nil {
+		dstBranch = string(data)
+	}
+
 	// Show Install/Update DST button if brew is available (can auto-install DepotDownloader)
 	// or if DepotDownloader is already installed, or if DST is already host-mounted
 	_, brewErr := exec.LookPath("brew")
@@ -45,6 +51,7 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 		"imageExists":       exists,
 		"dstInstalled":      dstInstalled,
 		"dstVersion":        dstVersion,
+		"dstBranch":         dstBranch,
 		"needsManualUpdate": needsManualUpdate,
 	})
 }
@@ -124,17 +131,17 @@ func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
 		log.Printf("DepotDownloader installed at: %s", depotPath)
 	}
 
-	beta := r.URL.Query().Get("beta")
+	branch := r.URL.Query().Get("branch")
 
 	dstDir := filepath.Join(h.dataDir, "dst_server")
 	os.MkdirAll(dstDir, 0755)
 
 	logPath := filepath.Join(h.dataDir, "install-dst.log")
-	log.Printf("Updating DST server via DepotDownloader (beta=%s, log: %s)", beta, logPath)
+	log.Printf("Updating DST server via DepotDownloader (branch=%s, log: %s)", branch, logPath)
 
 	args := []string{"-app", "343050", "-os", "linux", "-dir", dstDir}
-	if beta != "" {
-		args = append(args, "-beta", beta)
+	if branch != "" {
+		args = append(args, "-branch", branch)
 	}
 	cmd := exec.CommandContext(r.Context(), depotPath, args...)
 	output, err := cmd.CombinedOutput()
@@ -146,6 +153,12 @@ func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
 		logEntry += fmt.Sprintf("\nERROR: %s\n", err.Error())
 	} else {
 		logEntry += "\nSUCCESS\n"
+		// Save installed branch info
+		branchLabel := "public"
+		if branch != "" {
+			branchLabel = branch
+		}
+		os.WriteFile(filepath.Join(dstDir, "branch.txt"), []byte(branchLabel), 0644)
 	}
 	logFile, logErr := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if logErr == nil {

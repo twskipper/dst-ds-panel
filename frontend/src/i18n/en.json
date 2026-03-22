@@ -27,7 +27,9 @@
     "running": "Running",
     "stopped": "Stopped",
     "totalShards": "Total Shards",
-    "betaPlaceholder": "Version (e.g. 719036)"
+    "branchPublic": "Stable",
+    "branchBeta": "Beta",
+    "branchPrevious": "Previous Update"
   },
   "cluster": {
     "back": "Back",

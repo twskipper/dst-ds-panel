@@ -27,7 +27,9 @@
     "running": "运行中",
     "stopped": "已停止",
     "totalShards": "分片总数",
-    "betaPlaceholder": "版本号（如 719036）"
+    "branchPublic": "正式版",
+    "branchBeta": "测试版",
+    "branchPrevious": "上一版本"
   },
   "cluster": {
     "back": "返回",
