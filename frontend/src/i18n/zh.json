@@ -95,7 +95,14 @@
     "serverAdmins": "服务器管理员",
     "playerActivity": "玩家活动",
     "save": "保存配置",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "ports": "网络端口",
+    "masterPort": "主世界端口",
+    "cavesPort": "洞穴端口",
+    "savePorts": "保存端口",
+    "savingPorts": "保存中...",
+    "portsSaved": "端口已保存。重启服务器以应用更改。",
+    "portConflict": "端口冲突"
   },
   "console": {
     "title": "服务器控制台",

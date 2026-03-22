@@ -82,6 +82,27 @@ func WriteClusterConfig(clusterDir string, config *model.ClusterConfig) error {
 	return nil
 }
 
+// ReadShardPort reads server_port from a shard's server.ini
+func ReadShardPort(shardDir string) int {
+	cfg, err := ini.Load(filepath.Join(shardDir, "server.ini"))
+	if err != nil {
+		return 0
+	}
+	port, _ := cfg.Section("NETWORK").Key("server_port").Int()
+	return port
+}
+
+// WriteShardPort writes server_port to a shard's server.ini
+func WriteShardPort(shardDir string, port int) error {
+	iniPath := filepath.Join(shardDir, "server.ini")
+	cfg, err := ini.Load(iniPath)
+	if err != nil {
+		return err
+	}
+	cfg.Section("NETWORK").Key("server_port").SetValue(strconv.Itoa(port))
+	return cfg.SaveTo(iniPath)
+}
+
 func InitClusterDir(clusterDir string, config *model.ClusterConfig, enableCaves bool) error {
 	masterDir := filepath.Join(clusterDir, "Master")
 

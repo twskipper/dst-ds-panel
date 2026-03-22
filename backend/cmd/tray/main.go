@@ -20,6 +20,7 @@ var (
 	serverProcess *os.Process
 	serverMu      sync.Mutex
 	serverRunning bool
+	serverLogFile *os.File
 	appDir        string
 )
 
@@ -64,11 +65,8 @@ func getDataDir() string {
 	case "darwin":
 		return filepath.Join(homeDir, "Library", "Application Support", "DST DS Panel")
 	case "windows":
-		// Use %LOCALAPPDATA% or fallback to %APPDATA%
-		if appData := os.Getenv("LOCALAPPDATA"); appData != "" {
-			return filepath.Join(appData, "DST DS Panel")
-		}
-		return filepath.Join(homeDir, "AppData", "Local", "DST DS Panel")
+		// Portable: store data next to the exe
+		return appDir
 	default:
 		// Linux: XDG_DATA_HOME or ~/.local/share
 		if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
@@ -195,8 +193,19 @@ func startServer() bool {
 	cwd, _ := os.Getwd()
 	cmd := exec.Command(serverBin)
 	cmd.Dir = cwd
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	// Log server output to file
+	logPath := filepath.Join(cwd, "dst-panel-server.log")
+	lf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Printf("Failed to open log file: %v", err)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	} else {
+		cmd.Stdout = lf
+		cmd.Stderr = lf
+		serverLogFile = lf
+	}
 
 	if runtime.GOOS == "darwin" {
 		cmd.Env = append(os.Environ(),
@@ -204,20 +213,31 @@ func startServer() bool {
 		)
 	}
 
+	// Hide console window on Windows
+	hideConsoleWindow(cmd)
+
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to start server: %v", err)
+		if serverLogFile != nil {
+			serverLogFile.Close()
+			serverLogFile = nil
+		}
 		return false
 	}
 
 	serverProcess = cmd.Process
 	serverRunning = true
-	log.Printf("Server started (PID: %d)", serverProcess.Pid)
+	log.Printf("Server started (PID: %d), log: %s", serverProcess.Pid, logPath)
 
 	go func() {
 		cmd.Wait()
 		serverMu.Lock()
 		serverRunning = false
 		serverProcess = nil
+		if serverLogFile != nil {
+			serverLogFile.Close()
+			serverLogFile = nil
+		}
 		serverMu.Unlock()
 		log.Println("Server process exited")
 	}()

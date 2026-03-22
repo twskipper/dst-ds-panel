@@ -73,6 +73,9 @@ func NewRouter(h *Handler, auth config.Auth, frontendFS fs.FS) http.Handler {
 						r.Post("/console", h.SendConsoleCommand)
 					})
 
+					r.Get("/ports", h.GetClusterPorts)
+					r.Put("/ports", h.UpdateClusterPorts)
+
 					r.Get("/mods", h.ListMods)
 					r.Put("/mods", h.UpdateMods)
 

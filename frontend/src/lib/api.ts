@@ -72,6 +72,14 @@ export const api = {
   restartCluster: (id: string) =>
     request<Cluster>(`/clusters/${id}/restart`, { method: "POST" }),
 
+  getClusterPorts: (id: string) => request<Record<string, number>>(`/clusters/${id}/ports`),
+
+  updateClusterPorts: (id: string, ports: Record<string, number>) =>
+    request<Record<string, number>>(`/clusters/${id}/ports`, {
+      method: "PUT",
+      body: JSON.stringify(ports),
+    }),
+
   listMods: (id: string) => request<Mod[]>(`/clusters/${id}/mods`),
 
   updateMods: (id: string, mods: Mod[]) =>

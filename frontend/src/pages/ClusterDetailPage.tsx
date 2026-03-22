@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -148,6 +148,7 @@ export function ClusterDetailPage() {
               />
             </CardContent>
           </Card>
+          <PortConfig clusterId={cluster.id} shards={cluster.shards} />
           <Card>
             <CardHeader>
               <CardTitle>{t("overview.serverAdmins")}</CardTitle>
@@ -236,6 +237,63 @@ export function ClusterDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function PortConfig({ clusterId, shards }: { clusterId: string; shards: Array<{ name: string }> }) {
+  const { t } = useTranslation()
+  const [ports, setPorts] = useState<Record<string, number>>({})
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  useEffect(() => {
+    api.getClusterPorts(clusterId).then(setPorts).catch(() => {})
+  }, [clusterId])
+
+  const handleSave = async () => {
+    setSaving(true)
+    setMsg(null)
+    try {
+      await api.updateClusterPorts(clusterId, ports)
+      setMsg({ type: "success", text: t("overview.portsSaved") })
+    } catch (err) {
+      setMsg({ type: "error", text: err instanceof Error ? err.message : "Failed" })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("overview.ports")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
+          {shards.map((shard) => (
+            <div key={shard.name} className="space-y-1">
+              <label className="text-sm font-medium">
+                {shard.name === "Master" ? t("overview.masterPort") : t("overview.cavesPort")}
+              </label>
+              <input
+                type="number"
+                value={ports[shard.name] || ""}
+                onChange={(e) => setPorts({ ...ports, [shard.name]: parseInt(e.target.value) || 0 })}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        {msg && (
+          <p className={`text-sm ${msg.type === "error" ? "text-red-500" : "text-green-600"}`}>
+            {msg.text}
+          </p>
+        )}
+        <Button onClick={handleSave} disabled={saving} size="sm">
+          {saving ? t("overview.savingPorts") : t("overview.savePorts")}
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
 
