@@ -14,10 +14,10 @@ export function DashboardPage() {
   const { t } = useTranslation()
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [loading, setLoading] = useState(true)
-  const [dstStatus, setDstStatus] = useState<{ dstInstalled: boolean; dstVersion: string; needsManualUpdate: boolean } | null>(null)
+  const [dstStatus, setDstStatus] = useState<{ dstInstalled: boolean; dstVersion: string; dstBranch: string; needsManualUpdate: boolean } | null>(null)
   const [updating, setUpdating] = useState(false)
   const [updateMsg, setUpdateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const [betaVersion, setBetaVersion] = useState("")
+  const [branch, setBranch] = useState("")
 
   const fetchClusters = async () => {
     try {
@@ -51,7 +51,7 @@ export function DashboardPage() {
     setUpdating(true)
     setUpdateMsg(null)
     try {
-      await api.updateDST(betaVersion.trim() || undefined)
+      await api.updateDST(branch || undefined)
       setUpdateMsg({ type: "success", text: "DST server updated successfully. Restart running clusters to use the new version." })
       fetchStatus()
     } catch (err) {
@@ -75,6 +75,11 @@ export function DashboardPage() {
               >
                 <Badge variant="outline" className="cursor-pointer hover:bg-accent">
                   DST {dstStatus.dstVersion}
+                  {dstStatus.dstBranch && dstStatus.dstBranch !== "public" && (
+                    <span className="ml-1 text-yellow-600 dark:text-yellow-400">
+                      ({dstStatus.dstBranch})
+                    </span>
+                  )}
                 </Badge>
               </a>
             ) : (
@@ -87,13 +92,15 @@ export function DashboardPage() {
         <div className="flex gap-2">
           {dstStatus?.needsManualUpdate && (
             <>
-              <input
-                type="text"
-                placeholder={t("dashboard.betaPlaceholder")}
-                value={betaVersion}
-                onChange={(e) => setBetaVersion(e.target.value)}
-                className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm"
-              />
+              <select
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">{t("dashboard.branchPublic")}</option>
+                <option value="updatebeta">{t("dashboard.branchBeta")}</option>
+                <option value="previousupdate">{t("dashboard.branchPrevious")}</option>
+              </select>
               <Button
                 variant="outline"
                 onClick={handleUpdateDST}

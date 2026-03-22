@@ -80,11 +80,11 @@ export const api = {
       body: JSON.stringify(mods),
     }),
 
-  imageStatus: () => request<{ imageExists: boolean; dstInstalled: boolean; dstVersion: string; needsManualUpdate: boolean }>("/image/status"),
+  imageStatus: () => request<{ imageExists: boolean; dstInstalled: boolean; dstVersion: string; dstBranch: string; needsManualUpdate: boolean }>("/image/status"),
 
   buildImage: () => request<{ status: string; output: string }>("/image/build", { method: "POST" }),
 
-  updateDST: (beta?: string) => request<{ status: string; output: string }>(`/dst/update${beta ? `?beta=${beta}` : ""}`, { method: "POST" }),
+  updateDST: (branch?: string) => request<{ status: string; output: string }>(`/dst/update${branch ? `?branch=${branch}` : ""}`, { method: "POST" }),
 
   sendCommand: (id: string, shard: string, command: string) =>
     request<{ status: string; command: string }>(
