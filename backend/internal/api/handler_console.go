@@ -33,7 +33,7 @@ func (h *Handler) SendConsoleCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.docker.ExecCommand(r.Context(), shard.ContainerID, body.Command); err != nil {
+	if err := h.shardMgr.ExecCommand(r.Context(), shard.ContainerID, body.Command); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

@@ -5,12 +5,12 @@ import (
 	"log"
 	"time"
 
-	"dst-ds-panel/internal/docker"
+	"dst-ds-panel/internal/manager"
 	"dst-ds-panel/internal/model"
 	"dst-ds-panel/internal/store"
 )
 
-func StartHealthCheck(dockerMgr *docker.Manager, s *store.Store, intervalSeconds int) {
+func StartHealthCheck(mgr manager.ShardManager, s *store.Store, intervalSeconds int) {
 	if intervalSeconds <= 0 {
 		intervalSeconds = 30
 	}
@@ -21,14 +21,14 @@ func StartHealthCheck(dockerMgr *docker.Manager, s *store.Store, intervalSeconds
 		defer ticker.Stop()
 
 		for range ticker.C {
-			checkContainerHealth(dockerMgr, s)
+			checkShardHealth(mgr, s)
 		}
 	}()
 }
 
-func checkContainerHealth(dockerMgr *docker.Manager, s *store.Store) {
+func checkShardHealth(mgr manager.ShardManager, s *store.Store) {
 	ctx := context.Background()
-	running, err := dockerMgr.ListRunningShards(ctx)
+	running, err := mgr.ListRunningShards(ctx)
 	if err != nil {
 		return
 	}

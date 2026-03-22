@@ -36,7 +36,7 @@ func (h *Handler) StartCluster(w http.ResponseWriter, r *http.Request) {
 
 
 	// Auto-pull runtime image if not present
-	if err := h.docker.EnsureImage(r.Context()); err != nil {
+	if err := h.shardMgr.EnsureImage(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to pull Docker image: %v", err))
 		return
 	}
@@ -44,7 +44,7 @@ func (h *Handler) StartCluster(w http.ResponseWriter, r *http.Request) {
 	h.store.SaveCluster(*cluster)
 
 	for i, shard := range cluster.Shards {
-		containerID, err := h.docker.StartShard(r.Context(), cluster.DirName, shard.Name)
+		containerID, err := h.shardMgr.StartShard(r.Context(), cluster.DirName, shard.Name)
 		if err != nil {
 			cluster.Status = model.StatusError
 			h.store.SaveCluster(*cluster)
@@ -71,7 +71,7 @@ func (h *Handler) StopCluster(w http.ResponseWriter, r *http.Request) {
 
 	for i, shard := range cluster.Shards {
 		if shard.ContainerID != "" {
-			if err := h.docker.StopShard(r.Context(), shard.ContainerID); err != nil {
+			if err := h.shardMgr.StopShard(r.Context(), shard.ContainerID); err != nil {
 				// Log but continue stopping other shards
 				fmt.Printf("warning: failed to stop %s: %v\n", shard.Name, err)
 			}
@@ -97,13 +97,13 @@ func (h *Handler) RestartCluster(w http.ResponseWriter, r *http.Request) {
 	// Stop all shards
 	for _, shard := range cluster.Shards {
 		if shard.ContainerID != "" {
-			_ = h.docker.StopShard(r.Context(), shard.ContainerID)
+			_ = h.shardMgr.StopShard(r.Context(), shard.ContainerID)
 		}
 	}
 
 	// Start all shards
 	for i, shard := range cluster.Shards {
-		containerID, err := h.docker.StartShard(r.Context(), cluster.DirName, shard.Name)
+		containerID, err := h.shardMgr.StartShard(r.Context(), cluster.DirName, shard.Name)
 		if err != nil {
 			cluster.Status = model.StatusError
 			h.store.SaveCluster(*cluster)

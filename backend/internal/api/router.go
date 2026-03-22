@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"dst-ds-panel/internal/config"
-	"dst-ds-panel/internal/docker"
+	"dst-ds-panel/internal/manager"
 	"dst-ds-panel/internal/store"
 
 	"github.com/go-chi/chi/v5"
@@ -15,16 +15,18 @@ import (
 )
 
 type Handler struct {
-	docker  *docker.Manager
-	store   *store.Store
-	dataDir string
+	shardMgr manager.ShardManager
+	store    *store.Store
+	dataDir  string
+	mode     string // "docker" or "native"
 }
 
-func NewHandler(dockerMgr *docker.Manager, store *store.Store, dataDir string) *Handler {
+func NewHandler(shardMgr manager.ShardManager, store *store.Store, dataDir, mode string) *Handler {
 	return &Handler{
-		docker:  dockerMgr,
-		store:   store,
-		dataDir: dataDir,
+		shardMgr: shardMgr,
+		store:    store,
+		dataDir:  dataDir,
+		mode:     mode,
 	}
 }
 
@@ -70,6 +72,9 @@ func NewRouter(h *Handler, auth config.Auth, frontendFS fs.FS) http.Handler {
 						r.Get("/stats", h.StreamStats)
 						r.Post("/console", h.SendConsoleCommand)
 					})
+
+					r.Get("/ports", h.GetClusterPorts)
+					r.Put("/ports", h.UpdateClusterPorts)
 
 					r.Get("/mods", h.ListMods)
 					r.Put("/mods", h.UpdateMods)

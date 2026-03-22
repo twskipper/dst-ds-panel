@@ -61,11 +61,21 @@ func (h *Handler) CreateCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Find non-conflicting ports
+	serverMaster, serverCaves, shardMasterPort := h.findAvailablePorts()
+
+	// Write ports to server.ini and cluster.ini
+	dst.WriteShardPort(filepath.Join(clusterDir, "Master"), serverMaster)
+	if cavesEnabled {
+		dst.WriteShardPort(filepath.Join(clusterDir, "Caves"), serverCaves)
+	}
+	dst.WriteMasterPort(clusterDir, shardMasterPort)
+
 	shards := []model.Shard{
-		{Name: "Master", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: true, ServerPort: 10999, MasterPort: 27018}},
+		{Name: "Master", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: true, ServerPort: serverMaster, MasterPort: 27018}},
 	}
 	if cavesEnabled {
-		shards = append(shards, model.Shard{Name: "Caves", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: false, ServerPort: 10998, MasterPort: 27019}})
+		shards = append(shards, model.Shard{Name: "Caves", Status: model.StatusStopped, Config: model.ShardConfig{IsMaster: false, ServerPort: serverCaves, MasterPort: 27019}})
 	}
 
 	cluster := model.Cluster{
@@ -186,7 +196,7 @@ func (h *Handler) DeleteCluster(w http.ResponseWriter, r *http.Request) {
 	if cluster.Status == model.StatusRunning {
 		for _, shard := range cluster.Shards {
 			if shard.ContainerID != "" {
-				_ = h.docker.StopShard(r.Context(), shard.ContainerID)
+				_ = h.shardMgr.StopShard(r.Context(), shard.ContainerID)
 			}
 		}
 	}
@@ -203,6 +213,124 @@ func (h *Handler) DeleteCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) GetClusterPorts(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "clusterID")
+	cluster, err := h.store.GetCluster(id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	clusterDir := filepath.Join(h.dataDir, "clusters", cluster.DirName)
+	ports := make(map[string]int)
+	for _, shard := range cluster.Shards {
+		shardDir := filepath.Join(clusterDir, shard.Name)
+		port := dst.ReadShardPort(shardDir)
+		if port == 0 {
+			if shard.Name == "Master" {
+				port = 10999
+			} else {
+				port = 10998
+			}
+		}
+		ports[shard.Name] = port
+	}
+
+	// Include master_port from cluster.ini
+	masterPort := dst.ReadMasterPort(clusterDir)
+	if masterPort == 0 {
+		masterPort = 10888
+	}
+	ports["master_port"] = masterPort
+
+	writeJSON(w, http.StatusOK, ports)
+}
+
+func (h *Handler) UpdateClusterPorts(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "clusterID")
+	cluster, err := h.store.GetCluster(id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	var ports map[string]int
+	if err := json.NewDecoder(r.Body).Decode(&ports); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Check for port conflicts with other clusters
+	allClusters := h.store.ListClusters()
+	for _, other := range allClusters {
+		if other.ID == id {
+			continue
+		}
+		otherDir := filepath.Join(h.dataDir, "clusters", other.DirName)
+
+		// Check shard server_port conflicts
+		for _, shard := range other.Shards {
+			otherPort := dst.ReadShardPort(filepath.Join(otherDir, shard.Name))
+			for _, newPort := range ports {
+				if newPort == otherPort && otherPort != 0 {
+					writeError(w, http.StatusConflict,
+						fmt.Sprintf("Port %d conflicts with %s/%s", newPort, other.Name, shard.Name))
+					return
+				}
+			}
+		}
+
+		// Check master_port conflicts
+		if newMasterPort, ok := ports["master_port"]; ok {
+			otherMasterPort := dst.ReadMasterPort(otherDir)
+			if newMasterPort == otherMasterPort && otherMasterPort != 0 {
+				writeError(w, http.StatusConflict,
+					fmt.Sprintf("Master port %d conflicts with cluster %s", newMasterPort, other.Name))
+				return
+			}
+		}
+	}
+
+	// Check for duplicate ports within this cluster
+	seen := make(map[int]string)
+	for shardName, port := range ports {
+		if existing, ok := seen[port]; ok {
+			writeError(w, http.StatusConflict,
+				fmt.Sprintf("Port %d used by both %s and %s", port, existing, shardName))
+			return
+		}
+		seen[port] = shardName
+	}
+
+	// Write ports
+	clusterDir := filepath.Join(h.dataDir, "clusters", cluster.DirName)
+	for shardName, port := range ports {
+		if shardName == "master_port" {
+			// Write master_port to cluster.ini
+			if err := dst.WriteMasterPort(clusterDir, port); err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("write master_port: %v", err))
+				return
+			}
+			continue
+		}
+		shardDir := filepath.Join(clusterDir, shardName)
+		if err := dst.WriteShardPort(shardDir, port); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("write %s port: %v", shardName, err))
+			return
+		}
+	}
+
+	// Update store
+	for i, shard := range cluster.Shards {
+		if port, ok := ports[shard.Name]; ok {
+			cluster.Shards[i].Config.ServerPort = port
+		}
+	}
+	h.store.SaveCluster(*cluster)
+
+	writeJSON(w, http.StatusOK, ports)
 }
 
 func (h *Handler) ImportCluster(w http.ResponseWriter, r *http.Request) {
@@ -436,6 +564,41 @@ func copyDir(src, dst string) error {
 		_, err = io.Copy(dstFile, srcFile)
 		return err
 	})
+}
+
+// findAvailablePorts returns non-conflicting (serverPortMaster, serverPortCaves, masterPort).
+func (h *Handler) findAvailablePorts() (int, int, int) {
+	used := make(map[int]bool)
+	clusters := h.store.ListClusters()
+	for _, c := range clusters {
+		clusterDir := filepath.Join(h.dataDir, "clusters", c.DirName)
+		for _, shard := range c.Shards {
+			port := dst.ReadShardPort(filepath.Join(clusterDir, shard.Name))
+			if port > 0 {
+				used[port] = true
+			}
+		}
+		mp := dst.ReadMasterPort(clusterDir)
+		if mp > 0 {
+			used[mp] = true
+		}
+	}
+
+	// Find available server ports (default: 10999/10998)
+	serverMaster := 10999
+	serverCaves := 10998
+	for used[serverMaster] || used[serverCaves] {
+		serverMaster += 2
+		serverCaves += 2
+	}
+
+	// Find available master_port (default: 10888)
+	masterPort := 10888
+	for used[masterPort] {
+		masterPort++
+	}
+
+	return serverMaster, serverCaves, masterPort
 }
 
 func sanitizeID(name string) string {

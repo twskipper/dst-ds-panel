@@ -16,6 +16,7 @@ var (
 	serverProcess *os.Process
 	serverMu      sync.Mutex
 	serverRunning bool
+	serverLogFile *os.File
 	appDir        string
 )
 
@@ -27,10 +28,8 @@ func main() {
 	}
 	appDir = filepath.Dir(exe)
 
-	// Use ~/Library/Application Support/DST DS Panel as data directory
-	// This is the standard macOS location for app data
-	homeDir, _ := os.UserHomeDir()
-	dataHome := filepath.Join(homeDir, "Library", "Application Support", "DST DS Panel")
+	// Determine data directory based on platform
+	dataHome := getDataDir()
 	os.MkdirAll(dataHome, 0755)
 
 	// Copy config.example.json if config.json doesn't exist
@@ -44,8 +43,10 @@ func main() {
 	}
 
 	// Fix PATH for macOS GUI apps (they don't inherit shell PATH)
-	currentPath := os.Getenv("PATH")
-	os.Setenv("PATH", "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:"+currentPath)
+	if runtime.GOOS == "darwin" {
+		currentPath := os.Getenv("PATH")
+		os.Setenv("PATH", "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:"+currentPath)
+	}
 
 	os.Chdir(dataHome)
 	log.Printf("Data directory: %s", dataHome)
@@ -54,7 +55,25 @@ func main() {
 	systray.Run(onReady, onExit)
 }
 
+func getDataDir() string {
+	homeDir, _ := os.UserHomeDir()
+	switch runtime.GOOS {
+	case "darwin":
+		return filepath.Join(homeDir, "Library", "Application Support", "DST DS Panel")
+	case "windows":
+		// Portable: store data next to the exe
+		return appDir
+	default:
+		// Linux: XDG_DATA_HOME or ~/.local/share
+		if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
+			return filepath.Join(xdg, "dst-ds-panel")
+		}
+		return filepath.Join(homeDir, ".local", "share", "dst-ds-panel")
+	}
+}
+
 func onReady() {
+	systray.SetIcon(iconData)
 	systray.SetTitle("DST")
 	systray.SetTooltip("DST DS Panel")
 
@@ -67,14 +86,20 @@ func onReady() {
 	mStartStop := systray.AddMenuItem("Start Server", "Start the DST DS Panel backend")
 	mOpen := systray.AddMenuItem("Open Panel", "Open in browser")
 	mOpen.Disable()
-	mOpenData := systray.AddMenuItem("Open Data Folder", "Open data directory in Finder")
+	mOpenData := systray.AddMenuItem("Open Data Folder", "Open data directory")
 
 	systray.AddSeparator()
 
-	mDocker := systray.AddMenuItem("Docker: checking...", "")
-	mDocker.Disable()
-	mBrew := systray.AddMenuItem("Homebrew: checking...", "")
-	mBrew.Disable()
+	// Platform-specific dependency items
+	var depItems []*systray.MenuItem
+	if runtime.GOOS == "darwin" {
+		mDocker := systray.AddMenuItem("Docker: checking...", "")
+		mDocker.Disable()
+		mBrew := systray.AddMenuItem("Homebrew: checking...", "")
+		mBrew.Disable()
+		depItems = append(depItems, mDocker, mBrew)
+	}
+	// Windows native mode: no external dependencies needed
 
 	systray.AddSeparator()
 
@@ -82,24 +107,29 @@ func onReady() {
 
 	// Check dependencies in background
 	go func() {
-		dockerOk := findBinary("docker") != ""
-		if dockerOk {
-			mDocker.SetTitle("Docker: ✓ installed")
-		} else {
-			mDocker.SetTitle("Docker: ✗ not found")
-		}
+		if runtime.GOOS == "darwin" && len(depItems) >= 2 {
+			dockerOk := findBinary("docker") != ""
+			if dockerOk {
+				depItems[0].SetTitle("Docker: ✓ installed")
+			} else {
+				depItems[0].SetTitle("Docker: ✗ not found")
+			}
 
-		brewOk := findBinary("brew") != ""
-		if brewOk {
-			mBrew.SetTitle("Homebrew: ✓ installed")
-		} else {
-			mBrew.SetTitle("Homebrew: ✗ not found")
-		}
+			brewOk := findBinary("brew") != ""
+			if brewOk {
+				depItems[1].SetTitle("Homebrew: ✓ installed")
+			} else {
+				depItems[1].SetTitle("Homebrew: ✗ not found")
+			}
 
-		if dockerOk {
+			if dockerOk && brewOk {
+				mStatus.SetTitle("Ready")
+			} else {
+				mStatus.SetTitle("Missing: Docker or Homebrew")
+			}
+		} else {
+			// Windows/Linux native mode
 			mStatus.SetTitle("Ready")
-		} else {
-			mStatus.SetTitle("Missing: Docker or Homebrew")
 		}
 	}()
 
@@ -127,8 +157,7 @@ func onReady() {
 				openBrowser("http://localhost:8080")
 
 			case <-mOpenData.ClickedCh:
-				cwd, _ := os.Getwd()
-				exec.Command("open", cwd).Run()
+				openFolder()
 
 			case <-mQuit.ClickedCh:
 				serverMu.Lock()
@@ -151,44 +180,64 @@ func onExit() {
 }
 
 func startServer() bool {
-	// Find the server binary
 	serverBin := findServerBinary()
 	if serverBin == "" {
 		log.Println("Server binary not found")
 		return false
 	}
 
-	// Run server in the data directory (~/Library/Application Support/DST DS Panel)
 	cwd, _ := os.Getwd()
 	cmd := exec.Command(serverBin)
 	cmd.Dir = cwd
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	// Ensure server process has full PATH (macOS GUI apps have limited PATH)
-	cmd.Env = append(os.Environ(),
-		"PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-	)
+
+	// Log server output to file
+	logPath := filepath.Join(cwd, "dst-panel-server.log")
+	lf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Printf("Failed to open log file: %v", err)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	} else {
+		cmd.Stdout = lf
+		cmd.Stderr = lf
+		serverLogFile = lf
+	}
+
+	if runtime.GOOS == "darwin" {
+		cmd.Env = append(os.Environ(),
+			"PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+		)
+	}
+
+	// Hide console window on Windows
+	hideConsoleWindow(cmd)
 
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to start server: %v", err)
+		if serverLogFile != nil {
+			serverLogFile.Close()
+			serverLogFile = nil
+		}
 		return false
 	}
 
 	serverProcess = cmd.Process
 	serverRunning = true
-	log.Printf("Server started (PID: %d)", serverProcess.Pid)
+	log.Printf("Server started (PID: %d), log: %s", serverProcess.Pid, logPath)
 
-	// Monitor process in background
 	go func() {
 		cmd.Wait()
 		serverMu.Lock()
 		serverRunning = false
 		serverProcess = nil
+		if serverLogFile != nil {
+			serverLogFile.Close()
+			serverLogFile = nil
+		}
 		serverMu.Unlock()
 		log.Println("Server process exited")
 	}()
 
-	// Wait a moment for server to start
 	time.Sleep(500 * time.Millisecond)
 	return true
 }
@@ -198,7 +247,6 @@ func stopServer() {
 		log.Println("Stopping server...")
 		serverProcess.Signal(os.Interrupt)
 
-		// Wait up to 5 seconds for graceful shutdown
 		done := make(chan struct{})
 		go func() {
 			serverProcess.Wait()
@@ -218,54 +266,44 @@ func stopServer() {
 }
 
 func findServerBinary() string {
-	// Look for server binary in common locations
+	ext := ""
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+	}
+
 	candidates := []string{
-		filepath.Join(appDir, "dst-ds-panel"),
-		filepath.Join(appDir, "..", "dst-ds-panel"),
-		filepath.Join(appDir, "..", "backend", "dst-ds-panel"),
+		filepath.Join(appDir, "dst-ds-panel"+ext),
+		filepath.Join(appDir, "..", "dst-ds-panel"+ext),
+		filepath.Join(appDir, "..", "backend", "dst-ds-panel"+ext),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
 			return c
 		}
 	}
-	// Try PATH
-	if p, err := exec.LookPath("dst-ds-panel"); err == nil {
+	if p, err := exec.LookPath("dst-ds-panel" + ext); err == nil {
 		return p
 	}
 	return ""
 }
 
-func checkCommand(name string, args ...string) bool {
-	// macOS GUI apps have limited PATH, add common paths
-	fullPath := findBinary(name)
-	if fullPath == "" {
-		return false
-	}
-	cmd := exec.Command(fullPath, args...)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	err := cmd.Run()
-	return err == nil
-}
-
 func findBinary(name string) string {
-	// Check common macOS paths that GUI apps don't have in PATH
-	searchPaths := []string{
-		"/usr/local/bin",
-		"/opt/homebrew/bin",
-		"/usr/bin",
-		"/bin",
-		"/usr/sbin",
-		"/Applications/OrbStack.app/Contents/MacOS",
-	}
-	for _, dir := range searchPaths {
-		p := filepath.Join(dir, name)
-		if _, err := os.Stat(p); err == nil {
-			return p
+	if runtime.GOOS == "darwin" {
+		searchPaths := []string{
+			"/usr/local/bin",
+			"/opt/homebrew/bin",
+			"/usr/bin",
+			"/bin",
+			"/usr/sbin",
+			"/Applications/OrbStack.app/Contents/MacOS",
+		}
+		for _, dir := range searchPaths {
+			p := filepath.Join(dir, name)
+			if _, err := os.Stat(p); err == nil {
+				return p
+			}
 		}
 	}
-	// Fallback to PATH lookup
 	if p, err := exec.LookPath(name); err == nil {
 		return p
 	}
@@ -277,11 +315,24 @@ func openBrowser(url string) {
 	switch runtime.GOOS {
 	case "darwin":
 		cmd = exec.Command("open", url)
-	case "linux":
-		cmd = exec.Command("xdg-open", url)
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
 	default:
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("xdg-open", url)
 	}
 	cmd.Run()
 }
 
+func openFolder() {
+	cwd, _ := os.Getwd()
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", cwd)
+	case "windows":
+		cmd = exec.Command("explorer", cwd)
+	default:
+		cmd = exec.Command("xdg-open", cwd)
+	}
+	cmd.Run()
+}

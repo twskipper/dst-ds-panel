@@ -1,7 +1,7 @@
 DOCKER_REPO = twskipper/dst-ds-panel
 DST_REPO = twskipper/dst-ds-runtime
 
-.PHONY: backend frontend docker-build docker-build-linux docker-build-panel docker-push docker-all dst-install dev build release tray app
+.PHONY: backend frontend docker-build docker-build-linux docker-build-panel docker-push docker-all dst-install dev build release release-windows tray app
 
 # Build frontend, then embed into Go binary
 build: frontend
@@ -17,6 +17,8 @@ release: frontend
 	cd backend && GOOS=darwin GOARCH=arm64 go build -o ../dist/dst-ds-panel-darwin-arm64 ./cmd/server
 	cd backend && GOOS=darwin GOARCH=amd64 go build -o ../dist/dst-ds-panel-darwin-amd64 ./cmd/server
 	cd backend && GOOS=linux GOARCH=amd64 go build -o ../dist/dst-ds-panel-linux-amd64 ./cmd/server
+	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel.exe ./cmd/server
+	cd backend && GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui" -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
 	cd backend && go build -o dst-ds-panel-tray ./cmd/tray
 	rm -rf "dist/DST DS Panel.app"
 	mkdir -p "dist/DST DS Panel.app/Contents/MacOS" "dist/DST DS Panel.app/Contents/Resources"
@@ -34,11 +36,15 @@ release: frontend
 	cp deploy/fix-permissions.command dist/dmg-staging/Fix\ Permissions.command
 	hdiutil create -volname "DST DS Panel" -srcfolder dist/dmg-staging -ov -format UDZO "dist/DST DS Panel.dmg"
 	rm -rf dist/dmg-staging
+	cd dist && cp ../config.example.json . && cp ../deploy/README-Windows.txt README.txt && \
+		zip DST-DS-Panel-windows-x64.zip dst-ds-panel.exe dst-ds-panel-tray.exe config.example.json README.txt && \
+		rm -f config.example.json README.txt
 	@echo "Release artifacts in dist/:"
 	@echo "  dst-ds-panel-darwin-arm64"
 	@echo "  dst-ds-panel-darwin-amd64"
 	@echo "  dst-ds-panel-linux-amd64"
 	@echo "  DST DS Panel.dmg"
+	@echo "  DST-DS-Panel-windows-x64.zip"
 
 # macOS menu bar tray app
 tray:
@@ -86,6 +92,18 @@ docker-push:
 
 # Build all Docker images and push to Docker Hub
 docker-all: docker-build docker-build-linux docker-build-panel docker-push
+
+# Windows portable zip (no Docker required)
+release-windows: frontend
+	rm -rf backend/cmd/server/frontend
+	cp -r frontend/dist backend/cmd/server/frontend
+	mkdir -p dist
+	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel.exe ./cmd/server
+	cd backend && GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui" -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
+	cp config.example.json dist/config.example.json
+	cp deploy/README-Windows.txt dist/README.txt 2>/dev/null || echo "Extract and run dst-ds-panel-tray.exe" > dist/README.txt
+	cd dist && zip DST-DS-Panel-windows-x64.zip dst-ds-panel.exe dst-ds-panel-tray.exe config.example.json README.txt
+	@echo "Windows release: dist/DST-DS-Panel-windows-x64.zip"
 
 # macOS only: download/update DST server via DepotDownloader
 dst-install:

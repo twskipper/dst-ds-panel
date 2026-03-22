@@ -95,7 +95,15 @@
     "serverAdmins": "Server Admins",
     "playerActivity": "Player Activity",
     "save": "Save Configuration",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "ports": "Network Ports",
+    "masterPort": "Master Port",
+    "cavesPort": "Caves Port",
+    "savePorts": "Save Ports",
+    "savingPorts": "Saving...",
+    "portsSaved": "Ports saved. Restart server to apply.",
+    "portConflict": "Port conflict",
+    "shardMasterPort": "Shard Master Port"
   },
   "console": {
     "title": "Server Console",
