@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"log"
 	"os"
 	"os/exec"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/getlantern/systray"
 )
+
+//go:embed assets/icon.png
+var iconData []byte
 
 var (
 	serverProcess *os.Process
@@ -75,6 +79,7 @@ func getDataDir() string {
 }
 
 func onReady() {
+	systray.SetIcon(iconData)
 	systray.SetTitle("DST")
 	systray.SetTooltip("DST DS Panel")
 

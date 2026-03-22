@@ -152,8 +152,75 @@ func (h *Handler) findDepotDownloader(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("DepotDownloader installed but not found in PATH")
 	}
 
-	// Windows/Linux: auto-download standalone release
-	return "", fmt.Errorf("DepotDownloader not found. Download from https://github.com/SteamRE/DepotDownloader/releases and place in %s", toolsDir)
+	// Windows/Linux: auto-download standalone release from GitHub
+	return h.downloadDepotDownloader(ctx, toolsDir)
+}
+
+func (h *Handler) downloadDepotDownloader(ctx context.Context, toolsDir string) (string, error) {
+	// Determine platform suffix for GitHub release
+	var assetName string
+	switch runtime.GOOS {
+	case "windows":
+		assetName = "DepotDownloader-windows-x64.zip"
+	case "linux":
+		assetName = "DepotDownloader-linux-x64.zip"
+	default:
+		return "", fmt.Errorf("unsupported platform for auto-download: %s", runtime.GOOS)
+	}
+
+	os.MkdirAll(toolsDir, 0755)
+
+	// Use GitHub API to get latest release download URL
+	releaseURL := "https://github.com/SteamRE/DepotDownloader/releases/latest/download/" + assetName
+	log.Printf("Downloading DepotDownloader from %s", releaseURL)
+
+	zipPath := filepath.Join(toolsDir, assetName)
+
+	// Download the zip
+	dlCmd := exec.CommandContext(ctx, "curl", "-L", "-o", zipPath, releaseURL)
+	dlOut, dlErr := dlCmd.CombinedOutput()
+	if dlErr != nil {
+		return "", fmt.Errorf("failed to download DepotDownloader: %v\n%s", dlErr, string(dlOut))
+	}
+
+	// Extract the zip
+	if runtime.GOOS == "windows" {
+		// Use PowerShell to extract on Windows
+		psCmd := exec.CommandContext(ctx, "powershell", "-Command",
+			fmt.Sprintf("Expand-Archive -Force -Path '%s' -DestinationPath '%s'", zipPath, toolsDir))
+		psOut, psErr := psCmd.CombinedOutput()
+		if psErr != nil {
+			return "", fmt.Errorf("failed to extract DepotDownloader: %v\n%s", psErr, string(psOut))
+		}
+	} else {
+		// Use unzip on Linux
+		uzCmd := exec.CommandContext(ctx, "unzip", "-o", zipPath, "-d", toolsDir)
+		uzOut, uzErr := uzCmd.CombinedOutput()
+		if uzErr != nil {
+			return "", fmt.Errorf("failed to extract DepotDownloader: %v\n%s", uzErr, string(uzOut))
+		}
+	}
+
+	// Clean up zip
+	os.Remove(zipPath)
+
+	// Find the binary
+	binName := "DepotDownloader"
+	if runtime.GOOS == "windows" {
+		binName = "DepotDownloader.exe"
+	}
+	binPath := filepath.Join(toolsDir, binName)
+	if _, err := os.Stat(binPath); err != nil {
+		return "", fmt.Errorf("DepotDownloader extracted but binary not found at %s", binPath)
+	}
+
+	// Make executable (Linux)
+	if runtime.GOOS != "windows" {
+		os.Chmod(binPath, 0755)
+	}
+
+	log.Printf("DepotDownloader installed at: %s", binPath)
+	return binPath, nil
 }
 
 func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {

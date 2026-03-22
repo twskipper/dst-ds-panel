@@ -18,7 +18,7 @@ release: frontend
 	cd backend && GOOS=darwin GOARCH=amd64 go build -o ../dist/dst-ds-panel-darwin-amd64 ./cmd/server
 	cd backend && GOOS=linux GOARCH=amd64 go build -o ../dist/dst-ds-panel-linux-amd64 ./cmd/server
 	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel.exe ./cmd/server
-	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
+	cd backend && GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui" -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
 	cd backend && go build -o dst-ds-panel-tray ./cmd/tray
 	rm -rf "dist/DST DS Panel.app"
 	mkdir -p "dist/DST DS Panel.app/Contents/MacOS" "dist/DST DS Panel.app/Contents/Resources"
@@ -99,7 +99,7 @@ release-windows: frontend
 	cp -r frontend/dist backend/cmd/server/frontend
 	mkdir -p dist
 	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel.exe ./cmd/server
-	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
+	cd backend && GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui" -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
 	cp config.example.json dist/config.example.json
 	cp deploy/README-Windows.txt dist/README.txt 2>/dev/null || echo "Extract and run dst-ds-panel-tray.exe" > dist/README.txt
 	cd dist && zip DST-DS-Panel-windows-x64.zip dst-ds-panel.exe dst-ds-panel-tray.exe config.example.json README.txt
