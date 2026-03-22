@@ -10,30 +10,57 @@
 
 <p align="center">
   A web-based management panel for Don't Starve Together dedicated servers.<br>
-  Create, configure, and monitor multiple DST server clusters through a modern UI,<br>
-  with each cluster running as Docker containers.
+  Create, configure, and monitor multiple DST server clusters through a modern UI.
 </p>
 
 ## Features
 
 - **Cluster Management** — Create new worlds (with optional Caves), import existing saves, clone clusters
-- **World Settings UI** — Visual editor for world generation with difficulty presets (Easy/Normal/Hard/Challenge) and event/festival toggles
 - **Server Console** — Send Lua commands (save, rollback, announce, regenerate) directly from the UI
 - **Config File Editor** — Monaco editor with Lua/INI syntax highlighting
 - **Mod Management** — Add mods by Workshop ID, auto-detect mods from imported saves
 - **Admin Management** — Manage server admins (adminlist.txt)
 - **Player Activity** — View player join/leave, chat, and death events parsed from server logs
-- **Container Lifecycle** — Start, stop, restart servers with one click
+- **Port Management** — Configure network ports per cluster with auto conflict detection
 - **Live Logs** — Real-time log streaming from Master and Caves shards
 - **Resource Monitoring** — Live CPU and memory charts per shard
 - **Backup & Restore** — Download cluster backups as zip, import to restore
 - **Auto-Backup** — Scheduled backups every N hours (configurable)
 - **Discord Notifications** — Webhook alerts for server start/stop/error
-- **Multi-Cluster** — Run multiple server worlds simultaneously
+- **Multi-Cluster** — Run multiple server worlds simultaneously with auto port assignment
+- **Beta Branch** — Install DST stable or beta versions from the dashboard
 - **Dark Mode** — Toggle between light and dark themes
 - **Authentication** — Login system with JWT tokens
-- **Auto-Update** — Update DST server from the dashboard (macOS) or on each container start (Linux)
 - **Single Binary** — Frontend embedded in Go binary, no separate web server needed
+- **Cross-Platform** — Windows (native), macOS (Docker), Linux (Docker)
+
+---
+
+## Setup — Windows (Recommended)
+
+The simplest way to run DST dedicated servers. No Docker required.
+
+### Step 1: Download
+
+Download `DST-DS-Panel-windows-x64.zip` from the [Releases](../../releases) page and extract to a folder (e.g. `C:\DST-DS-Panel`).
+
+### Step 2: Run
+
+Double-click `dst-ds-panel-tray.exe`. A **DST** icon appears in the system tray (bottom-right).
+
+Click the tray icon → **Start Server** → **Open Panel**.
+
+### Step 3: Install DST
+
+In the web panel, click **"Install DST"** on the dashboard. DepotDownloader will be auto-downloaded and DST dedicated server will be installed (~2GB).
+
+### Step 4: Create & Play
+
+1. Click **"New Cluster"**
+2. Fill in server name, paste your [cluster token](#1-get-a-cluster-token)
+3. Click **"Create Cluster"** → **"Start Server"**
+
+Data is stored next to the exe. Fully portable — move the folder anywhere.
 
 ---
 
@@ -42,11 +69,9 @@
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev/) (recommended)
-- [Homebrew](https://brew.sh/) — for installing DepotDownloader
+- [Homebrew](https://brew.sh/)
 
-### Step 1: Download
-
-**Option A: macOS App (Recommended)**
+### Option A: macOS App (Recommended)
 
 Download `DST.DS.Panel.dmg` from the [Releases](../../releases) page, open the DMG, and drag the app to `/Applications`.
 
@@ -57,57 +82,22 @@ If macOS blocks the app, use one of these fixes:
 
 Double-click to launch — it runs as a menu bar app with one-click server start/stop.
 
-**Option B: Binary**
+### Option B: Binary
 
-Download `dst-ds-panel-darwin-arm64` from the [Releases](../../releases) page.
+Download `dst-ds-panel-darwin-arm64` from [Releases](../../releases).
 
 ```bash
 chmod +x dst-ds-panel-darwin-arm64
-```
-
-### Step 2: Build the Docker Image
-
-```bash
-docker build --platform linux/amd64 -f docker/Dockerfile.dst -t dst-server:latest docker/
-```
-
-### Step 3: Install DST Server
-
-```bash
-./scripts/install-dst.sh
-```
-
-This installs DepotDownloader via Homebrew (if needed) and downloads the DST Linux dedicated server (~2GB) to `data/dst_server/`. You can also do this from the dashboard UI via the **"Update DST"** button.
-
-### Step 4: Configure
-
-Create `config.json` next to the binary:
-
-```json
-{
-  "port": "8080",
-  "dataDir": "./data",
-  "imageName": "dst-server:latest",
-  "platform": "linux/amd64",
-  "auth": {
-    "username": "admin",
-    "password": "admin",
-    "secret": "change-this-to-a-random-string"
-  }
-}
-```
-
-### Step 5: Run
-
-```bash
 ./dst-ds-panel-darwin-arm64
 ```
 
-Open `http://localhost:8080` and login.
+Open `http://localhost:8080` and login (default: admin/admin).
+
+Click **"Install DST"** on the dashboard to download the DST server. The Docker image will be auto-pulled when you start your first cluster.
 
 ---
 
-## Quick Start — Docker (One Command)
+## Quick Start — Docker (Linux)
 
 The fastest way to get started on any Linux server:
 
@@ -136,57 +126,24 @@ docker compose up -d
 
 Open `http://your-server:8080` and login (default: admin/admin).
 
-> **Note:** Docker socket mount (`/var/run/docker.sock`) is required for the panel to manage DST containers. The DST runtime image (`twskipper/dst-ds-runtime:linux`) will be pulled automatically when you start your first cluster.
+> **Note:** Docker socket mount (`/var/run/docker.sock`) is required for the panel to manage DST containers. The DST runtime image will be pulled automatically when you start your first cluster.
 
 ---
 
-## Setup — Linux amd64
+## Setup — Linux amd64 (Binary)
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/engine/install/)
 
-### Step 1: Download
-
-Download `dst-ds-panel-linux-amd64` from the [Releases](../../releases) page, or build from source (see [Development](#development)).
+Download `dst-ds-panel-linux-amd64` from [Releases](../../releases).
 
 ```bash
 chmod +x dst-ds-panel-linux-amd64
-```
-
-### Step 2: Build the Docker Image
-
-```bash
-docker build -f docker/Dockerfile.linux -t dst-server:latest docker/
-```
-
-This image includes SteamCMD and will automatically download/update DST server on each container start. No manual DST installation needed.
-
-### Step 3: Configure
-
-Create `config.json` next to the binary:
-
-```json
-{
-  "port": "8080",
-  "dataDir": "./data",
-  "imageName": "dst-server:latest",
-  "platform": "linux/amd64",
-  "auth": {
-    "username": "admin",
-    "password": "admin",
-    "secret": "change-this-to-a-random-string"
-  }
-}
-```
-
-### Step 4: Run
-
-```bash
 ./dst-ds-panel-linux-amd64
 ```
 
-Open `http://your-server:8080` and login.
+Open `http://your-server:8080` and login. The Docker image will be auto-pulled on first cluster start.
 
 ---
 
@@ -210,6 +167,8 @@ Or in-game, press `~` and run `TheNet:GenerateClusterToken()`.
 4. Paste your cluster token
 5. Click **"Create Cluster"**
 
+Network ports are auto-assigned to avoid conflicts when running multiple clusters.
+
 ### 3. Import an Existing Save
 
 1. Click **"New Cluster"** → **"Import"** tab
@@ -224,9 +183,8 @@ Or in-game, press `~` and run `TheNet:GenerateClusterToken()`.
 
 ### 5. Manage the Server
 
-- **Overview** — Edit game settings, manage admins, view player activity
+- **Overview** — Edit game settings, configure network ports, manage admins, view player activity
 - **Console** — Send commands (save, rollback, announce, regenerate), raw Lua input
-- **World** — Visual world settings editor with difficulty presets (Easy/Normal/Hard/Challenge) and event toggles
 - **Mods** — Add/remove mods by Workshop ID, edit per-mod configuration
 - **Files** — Edit any config file with Monaco editor (Lua/INI highlighting)
 - **Backup** — Download cluster as zip
@@ -234,8 +192,7 @@ Or in-game, press `~` and run `TheNet:GenerateClusterToken()`.
 
 ### 6. Update DST Server
 
-- **macOS**: Click **"Update DST"** on the dashboard, or run `./scripts/install-dst.sh`
-- **Linux**: DST auto-updates on each container start via SteamCMD
+Select **Stable**, **Beta**, or **Previous Update** from the dropdown on the dashboard, then click **"Update DST"**.
 
 ---
 
@@ -247,8 +204,8 @@ Or in-game, press `~` and run `TheNet:GenerateClusterToken()`.
 |-------|---------|-------------|
 | `port` | `"8080"` | HTTP server port |
 | `dataDir` | `"./data"` | Directory for clusters, saves, and state |
-| `imageName` | `"dst-server:latest"` | Docker image name for DST containers |
-| `platform` | `"linux/amd64"` | Docker platform |
+| `imageName` | `"dst-server:latest"` | Docker image name (Docker mode only) |
+| `platform` | `"linux/amd64"` | Docker platform (Docker mode only) |
 | `auth.username` | `"admin"` | Login username |
 | `auth.password` | `"admin"` | Login password |
 | `auth.secret` | — | JWT signing secret (change this!) |
@@ -256,6 +213,8 @@ Or in-game, press `~` and run `TheNet:GenerateClusterToken()`.
 | `discordWebhook` | `""` | Discord webhook URL for server notifications |
 
 All fields can be overridden with environment variables: `PORT`, `DATA_DIR`, `DST_IMAGE`, `DST_PLATFORM`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_SECRET`.
+
+Runtime mode is auto-detected: **native** on Windows (no Docker), **docker** on macOS/Linux. Override with `DST_MODE=native` or `DST_MODE=docker`.
 
 ---
 
@@ -275,21 +234,24 @@ make dev-frontend    # Vite frontend on :5173 (proxies /api to :8080)
 make build           # Output: backend/dst-ds-panel
 
 # Cross-compile for all platforms
-make release         # Output: dist/dst-ds-panel-{darwin-arm64,darwin-amd64,linux-amd64}
+make release         # Output: dist/ (macOS DMG, Windows zip, Linux binary)
+make release-windows # Windows only
 ```
 
 ## Architecture
 
 ```
-Browser ──HTTP/WS──→ Go Backend ──Docker SDK──→ dst-{cluster}-master (container)
-                         │                   → dst-{cluster}-caves  (container)
-                         │
-                    data/clusters/{name}/     (volume mounted into containers)
-                    data/dst_server/          (DST binary, mounted or built-in)
+                          ┌─── Docker Mode (macOS/Linux) ───┐
+Browser ──HTTP/WS──→ Go  │  Docker SDK → containers        │
+                   Backend│                                  │
+                          ├─── Native Mode (Windows) ───────┤
+                          │  OS processes (no Docker)        │
+                          └──────────────────────────────────┘
+
+Data: clusters/{name}/    DST server: dst_server/bin64/
 ```
 
-- Each cluster's Master and Caves shards run as separate Docker containers
-- Containers use **host networking** for inter-shard UDP communication
-- Config files and saves are volume-mounted from `data/clusters/`
-- **macOS**: DST server files are host-mounted from `data/dst_server/`
-- **Linux**: DST server is installed inside the container via SteamCMD
+- **Windows**: DST runs as native processes, no Docker required
+- **macOS/Linux**: Each shard runs as a Docker container with host networking
+- Config files and saves stored in `data/clusters/`
+- Ports auto-assigned per cluster to avoid conflicts in multi-server setups
