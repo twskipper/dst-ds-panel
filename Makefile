@@ -17,6 +17,8 @@ release: frontend
 	cd backend && GOOS=darwin GOARCH=arm64 go build -o ../dist/dst-ds-panel-darwin-arm64 ./cmd/server
 	cd backend && GOOS=darwin GOARCH=amd64 go build -o ../dist/dst-ds-panel-darwin-amd64 ./cmd/server
 	cd backend && GOOS=linux GOARCH=amd64 go build -o ../dist/dst-ds-panel-linux-amd64 ./cmd/server
+	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel.exe ./cmd/server
+	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
 	cd backend && go build -o dst-ds-panel-tray ./cmd/tray
 	rm -rf "dist/DST DS Panel.app"
 	mkdir -p "dist/DST DS Panel.app/Contents/MacOS" "dist/DST DS Panel.app/Contents/Resources"
@@ -34,11 +36,15 @@ release: frontend
 	cp deploy/fix-permissions.command dist/dmg-staging/Fix\ Permissions.command
 	hdiutil create -volname "DST DS Panel" -srcfolder dist/dmg-staging -ov -format UDZO "dist/DST DS Panel.dmg"
 	rm -rf dist/dmg-staging
+	cd dist && cp ../config.example.json . && cp ../deploy/README-Windows.txt README.txt && \
+		zip DST-DS-Panel-windows-x64.zip dst-ds-panel.exe dst-ds-panel-tray.exe config.example.json README.txt && \
+		rm -f config.example.json README.txt
 	@echo "Release artifacts in dist/:"
 	@echo "  dst-ds-panel-darwin-arm64"
 	@echo "  dst-ds-panel-darwin-amd64"
 	@echo "  dst-ds-panel-linux-amd64"
 	@echo "  DST DS Panel.dmg"
+	@echo "  DST-DS-Panel-windows-x64.zip"
 
 # macOS menu bar tray app
 tray:
