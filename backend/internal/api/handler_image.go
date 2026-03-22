@@ -1,17 +1,19 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
 func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
-	exists, err := h.docker.ImageExists(r.Context())
+	exists, err := h.shardMgr.ImageExists(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -28,7 +30,8 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 	if entries, err := os.ReadDir(binDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() && (e.Name() == "dontstarve_dedicated_server_nullrenderer" ||
-				e.Name() == "dontstarve_dedicated_server_nullrenderer_x64") {
+				e.Name() == "dontstarve_dedicated_server_nullrenderer_x64" ||
+				e.Name() == "dontstarve_dedicated_server_nullrenderer_x64.exe") {
 				dstInstalled = true
 				break
 			}
@@ -41,11 +44,17 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 		dstBranch = string(data)
 	}
 
-	// Show Install/Update DST button if brew is available (can auto-install DepotDownloader)
-	// or if DepotDownloader is already installed, or if DST is already host-mounted
-	_, brewErr := exec.LookPath("brew")
-	_, depotErr := exec.LookPath("DepotDownloader")
-	needsManualUpdate := dstInstalled || depotErr == nil || brewErr == nil
+	// Determine if we can show the Install/Update DST button
+	needsManualUpdate := false
+	if h.mode == "native" {
+		// Native mode: always show update button (DepotDownloader can be auto-downloaded)
+		needsManualUpdate = true
+	} else {
+		// Docker mode: show if brew or DepotDownloader available
+		_, brewErr := exec.LookPath("brew")
+		_, depotErr := exec.LookPath("DepotDownloader")
+		needsManualUpdate = dstInstalled || depotErr == nil || brewErr == nil
+	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"imageExists":       exists,
@@ -53,10 +62,16 @@ func (h *Handler) ImageStatus(w http.ResponseWriter, r *http.Request) {
 		"dstVersion":        dstVersion,
 		"dstBranch":         dstBranch,
 		"needsManualUpdate": needsManualUpdate,
+		"mode":              h.mode,
 	})
 }
 
 func (h *Handler) BuildImage(w http.ResponseWriter, r *http.Request) {
+	if h.mode == "native" {
+		writeError(w, http.StatusBadRequest, "Docker image build not available in native mode")
+		return
+	}
+
 	dockerDir := ""
 	candidates := []string{
 		filepath.Join(h.dataDir, "..", "docker"),
@@ -94,52 +109,75 @@ func (h *Handler) BuildImage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
-	depotPath, err := exec.LookPath("DepotDownloader")
-	if err != nil {
-		// Auto-install DepotDownloader via Homebrew
-		brewPath, brewErr := exec.LookPath("brew")
-		if brewErr != nil {
-			writeError(w, http.StatusBadRequest, "Homebrew not found. Install from https://brew.sh")
-			return
+func (h *Handler) findDepotDownloader(ctx context.Context) (string, error) {
+	// Check PATH first
+	if p, err := exec.LookPath("DepotDownloader"); err == nil {
+		return p, nil
+	}
+
+	// Check our tools directory
+	toolsDir := filepath.Join(h.dataDir, "tools")
+	localBin := filepath.Join(toolsDir, "DepotDownloader")
+	if runtime.GOOS == "windows" {
+		localBin = filepath.Join(toolsDir, "DepotDownloader.exe")
+	}
+	if _, err := os.Stat(localBin); err == nil {
+		return localBin, nil
+	}
+
+	// Try to auto-install
+	if runtime.GOOS == "darwin" {
+		// macOS: use Homebrew
+		brewPath, err := exec.LookPath("brew")
+		if err != nil {
+			return "", fmt.Errorf("DepotDownloader not found. Install Homebrew from https://brew.sh")
 		}
 
-		log.Println("DepotDownloader not found, installing via Homebrew...")
-
-		// brew tap + install
-		tapCmd := exec.CommandContext(r.Context(), brewPath, "tap", "steamre/tools")
-		tapOut, tapErr := tapCmd.CombinedOutput()
+		log.Println("Installing DepotDownloader via Homebrew...")
+		tapCmd := exec.CommandContext(ctx, brewPath, "tap", "steamre/tools")
+		tapOut, _ := tapCmd.CombinedOutput()
 		log.Printf("brew tap: %s", string(tapOut))
 
-		installCmd := exec.CommandContext(r.Context(), brewPath, "install", "depotdownloader")
+		installCmd := exec.CommandContext(ctx, brewPath, "install", "depotdownloader")
 		installOut, installErr := installCmd.CombinedOutput()
 		log.Printf("brew install: %s", string(installOut))
 
-		if tapErr != nil || installErr != nil {
-			errMsg := fmt.Sprintf("Failed to install DepotDownloader.\ntap: %v\ninstall: %v\n%s\n%s",
-				tapErr, installErr, string(tapOut), string(installOut))
-			writeError(w, http.StatusInternalServerError, errMsg)
-			return
+		if installErr != nil {
+			return "", fmt.Errorf("failed to install DepotDownloader: %v\n%s", installErr, string(installOut))
 		}
 
-		// Find the newly installed binary
-		depotPath, err = exec.LookPath("DepotDownloader")
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "DepotDownloader installed but not found in PATH")
-			return
+		if p, err := exec.LookPath("DepotDownloader"); err == nil {
+			return p, nil
 		}
-		log.Printf("DepotDownloader installed at: %s", depotPath)
+		return "", fmt.Errorf("DepotDownloader installed but not found in PATH")
+	}
+
+	// Windows/Linux: auto-download standalone release
+	return "", fmt.Errorf("DepotDownloader not found. Download from https://github.com/SteamRE/DepotDownloader/releases and place in %s", toolsDir)
+}
+
+func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
+	depotPath, err := h.findDepotDownloader(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	branch := r.URL.Query().Get("branch")
+
+	// Determine target OS for DepotDownloader
+	targetOS := "linux"
+	if h.mode == "native" && runtime.GOOS == "windows" {
+		targetOS = "windows"
+	}
 
 	dstDir := filepath.Join(h.dataDir, "dst_server")
 	os.MkdirAll(dstDir, 0755)
 
 	logPath := filepath.Join(h.dataDir, "install-dst.log")
-	log.Printf("Updating DST server via DepotDownloader (branch=%s, log: %s)", branch, logPath)
+	log.Printf("Updating DST server via DepotDownloader (os=%s, branch=%s, log: %s)", targetOS, branch, logPath)
 
-	args := []string{"-app", "343050", "-os", "linux", "-dir", dstDir}
+	args := []string{"-app", "343050", "-os", targetOS, "-dir", dstDir}
 	if branch != "" {
 		args = append(args, "-branch", branch)
 	}
@@ -148,12 +186,11 @@ func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
 
 	// Write log file
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	logEntry := fmt.Sprintf("=== DST Install/Update: %s ===\nCommand: DepotDownloader -app 343050 -os linux -dir %s\n\n%s\n", timestamp, dstDir, string(output))
+	logEntry := fmt.Sprintf("=== DST Install/Update: %s ===\nCommand: DepotDownloader -app 343050 -os %s -dir %s\n\n%s\n", timestamp, targetOS, dstDir, string(output))
 	if err != nil {
 		logEntry += fmt.Sprintf("\nERROR: %s\n", err.Error())
 	} else {
 		logEntry += "\nSUCCESS\n"
-		// Save installed branch info
 		branchLabel := "public"
 		if branch != "" {
 			branchLabel = branch
@@ -166,12 +203,14 @@ func (h *Handler) UpdateDST(w http.ResponseWriter, r *http.Request) {
 		logFile.Close()
 	}
 
-	// Fix permissions
-	binDir := filepath.Join(dstDir, "bin64")
-	if entries, dirErr := os.ReadDir(binDir); dirErr == nil {
-		for _, e := range entries {
-			if !e.IsDir() {
-				os.Chmod(filepath.Join(binDir, e.Name()), 0755)
+	// Fix permissions (Linux/macOS)
+	if runtime.GOOS != "windows" {
+		binDir := filepath.Join(dstDir, "bin64")
+		if entries, dirErr := os.ReadDir(binDir); dirErr == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					os.Chmod(filepath.Join(binDir, e.Name()), 0755)
+				}
 			}
 		}
 	}

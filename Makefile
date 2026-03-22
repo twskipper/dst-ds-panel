@@ -1,7 +1,7 @@
 DOCKER_REPO = twskipper/dst-ds-panel
 DST_REPO = twskipper/dst-ds-runtime
 
-.PHONY: backend frontend docker-build docker-build-linux docker-build-panel docker-push docker-all dst-install dev build release tray app
+.PHONY: backend frontend docker-build docker-build-linux docker-build-panel docker-push docker-all dst-install dev build release release-windows tray app
 
 # Build frontend, then embed into Go binary
 build: frontend
@@ -86,6 +86,18 @@ docker-push:
 
 # Build all Docker images and push to Docker Hub
 docker-all: docker-build docker-build-linux docker-build-panel docker-push
+
+# Windows portable zip (no Docker required)
+release-windows: frontend
+	rm -rf backend/cmd/server/frontend
+	cp -r frontend/dist backend/cmd/server/frontend
+	mkdir -p dist
+	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel.exe ./cmd/server
+	cd backend && GOOS=windows GOARCH=amd64 go build -o ../dist/dst-ds-panel-tray.exe ./cmd/tray
+	cp config.example.json dist/config.example.json
+	cp deploy/README-Windows.txt dist/README.txt 2>/dev/null || echo "Extract and run dst-ds-panel-tray.exe" > dist/README.txt
+	cd dist && zip DST-DS-Panel-windows-x64.zip dst-ds-panel.exe dst-ds-panel-tray.exe config.example.json README.txt
+	@echo "Windows release: dist/DST-DS-Panel-windows-x64.zip"
 
 # macOS only: download/update DST server via DepotDownloader
 dst-install:

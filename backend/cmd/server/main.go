@@ -9,9 +9,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"runtime"
+
 	"dst-ds-panel/internal/api"
 	"dst-ds-panel/internal/config"
-	"dst-ds-panel/internal/docker"
+	"dst-ds-panel/internal/manager"
 	"dst-ds-panel/internal/model"
 	"dst-ds-panel/internal/service"
 	"dst-ds-panel/internal/store"
@@ -20,11 +22,11 @@ import (
 //go:embed all:frontend
 var frontendFS embed.FS
 
-func reconcileStatus(dockerMgr *docker.Manager, s *store.Store) {
+func reconcileStatus(mgr manager.ShardManager, s *store.Store) {
 	ctx := context.Background()
-	running, err := dockerMgr.ListRunningShards(ctx)
+	running, err := mgr.ListRunningShards(ctx)
 	if err != nil {
-		log.Printf("Warning: could not list Docker containers: %v", err)
+		log.Printf("Warning: could not list running shards: %v", err)
 		return
 	}
 
@@ -49,7 +51,7 @@ func reconcileStatus(dockerMgr *docker.Manager, s *store.Store) {
 		}
 		s.SaveCluster(cluster)
 	}
-	log.Printf("Reconciled %d clusters with Docker state (%d running containers)", len(clusters), len(running))
+	log.Printf("Reconciled %d clusters (%d running shards)", len(clusters), len(running))
 }
 
 func main() {
@@ -81,24 +83,42 @@ func main() {
 
 	os.MkdirAll(filepath.Join(dataDir, "clusters"), 0755)
 
-	dockerMgr, err := docker.NewManager(dataDir, cfg.ImageName, cfg.Platform)
-	if err != nil {
-		log.Fatal("Docker not available:", err)
+	// Determine runtime mode: native (no Docker) or docker
+	mode := os.Getenv("DST_MODE")
+	if mode == "" {
+		if runtime.GOOS == "windows" {
+			mode = "native"
+		} else {
+			mode = "docker"
+		}
 	}
-	defer dockerMgr.Close()
+
+	var shardMgr manager.ShardManager
+	if mode == "native" {
+		shardMgr = manager.NewProcessManager(dataDir)
+		log.Println("Running in native mode (no Docker)")
+	} else {
+		dockerMgr, err := manager.NewDockerManager(dataDir, cfg.ImageName, cfg.Platform)
+		if err != nil {
+			log.Fatal("Docker not available:", err)
+		}
+		shardMgr = dockerMgr
+		log.Println("Running in Docker mode")
+	}
+	defer shardMgr.Close()
 
 	s, err := store.New(filepath.Join(dataDir, "store.json"))
 	if err != nil {
 		log.Fatal("Store init failed:", err)
 	}
 
-	// Reconcile cluster status with actual Docker containers
-	reconcileStatus(dockerMgr, s)
+	// Reconcile cluster status with running shards
+	reconcileStatus(shardMgr, s)
 
 	// Start services
 	service.InitDiscord(cfg.DiscordWebhook)
 	service.StartAutoBackup(dataDir, cfg.BackupInterval)
-	service.StartHealthCheck(dockerMgr, s, 30)
+	service.StartHealthCheck(shardMgr, s, 30)
 
 	// Embedded frontend
 	frontendContent, fsErr := fs.Sub(frontendFS, "frontend")
@@ -106,10 +126,10 @@ func main() {
 		log.Fatal("Failed to load embedded frontend:", fsErr)
 	}
 
-	h := api.NewHandler(dockerMgr, s, dataDir)
+	h := api.NewHandler(shardMgr, s, dataDir, mode)
 	router := api.NewRouter(h, cfg.Auth, frontendContent)
 
-	log.Printf("Config: image=%s platform=%s auth_user=%s", cfg.ImageName, cfg.Platform, cfg.Auth.Username)
+	log.Printf("Config: mode=%s image=%s auth_user=%s", mode, cfg.ImageName, cfg.Auth.Username)
 	log.Printf("Data directory: %s", dataDir)
 	log.Printf("Starting DST DS Panel on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {

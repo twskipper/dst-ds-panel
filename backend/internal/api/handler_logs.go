@@ -35,7 +35,7 @@ func (h *Handler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	lines, err := h.docker.StreamLogsLines(r.Context(), shard.ContainerID)
+	lines, err := h.shardMgr.StreamLogsLines(r.Context(), shard.ContainerID)
 	if err != nil {
 		conn.WriteMessage(websocket.TextMessage, []byte("Error: "+err.Error()))
 		return
@@ -70,7 +70,7 @@ func (h *Handler) StreamStats(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	statsCh, err := h.docker.StreamStats(r.Context(), shard.ContainerID)
+	statsCh, err := h.shardMgr.StreamStats(r.Context(), shard.ContainerID)
 	if err != nil {
 		conn.WriteMessage(websocket.TextMessage, []byte("Error: "+err.Error()))
 		return

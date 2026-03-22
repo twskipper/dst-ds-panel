@@ -186,7 +186,7 @@ func (h *Handler) DeleteCluster(w http.ResponseWriter, r *http.Request) {
 	if cluster.Status == model.StatusRunning {
 		for _, shard := range cluster.Shards {
 			if shard.ContainerID != "" {
-				_ = h.docker.StopShard(r.Context(), shard.ContainerID)
+				_ = h.shardMgr.StopShard(r.Context(), shard.ContainerID)
 			}
 		}
 	}
