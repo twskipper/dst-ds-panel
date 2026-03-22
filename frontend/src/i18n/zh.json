@@ -26,7 +26,8 @@
     "totalClusters": "集群总数",
     "running": "运行中",
     "stopped": "已停止",
-    "totalShards": "分片总数"
+    "totalShards": "分片总数",
+    "betaPlaceholder": "版本号（如 719036）"
   },
   "cluster": {
     "back": "返回",
