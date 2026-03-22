@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DST DS Panel - A web application for managing Don't Starve Together (DST) dedicated servers via Docker containers. Users can create/import server clusters, configure mods, start/stop servers, monitor logs/resources, send console commands, and manage world settings.
+DST DS Panel - A cross-platform web application for managing Don't Starve Together (DST) dedicated servers. On Windows, DST runs as native processes (no Docker). On macOS/Linux, DST runs in Docker containers. Users can create/import server clusters, configure mods, start/stop servers, monitor logs/resources, send console commands, and manage network ports.
 
 ## Tech Stack
 
 - **Backend**: Go (Chi router, Docker SDK, gorilla/websocket, go-ini, golang-jwt)
 - **Frontend**: React + TypeScript + Vite + shadcn/ui + Recharts + Monaco Editor
-- **Container**: Docker (amd64 Debian with DST runtime libs)
-- **DST Install**: DepotDownloader (macOS) or SteamCMD (Linux amd64)
+- **Runtime**: Native processes (Windows) or Docker containers (macOS/Linux)
+- **DST Install**: DepotDownloader (macOS/Windows auto-download) or SteamCMD (Linux Docker)
 - **Persistence**: JSON file store (`data/store.json`)
 - **Auth**: JWT-based login, credentials in `config.json`
 
@@ -20,7 +20,8 @@ DST DS Panel - A web application for managing Don't Starve Together (DST) dedica
 ```bash
 # Production: single binary with embedded frontend
 make build              # Output: backend/dst-ds-panel
-make release            # Cross-compile: dist/dst-ds-panel-{darwin-arm64,darwin-amd64,linux-amd64}
+make release            # Cross-compile: macOS DMG, Windows zip, Linux binary
+make release-windows    # Windows only: dist/DST-DS-Panel-windows-x64.zip
 
 # Development
 make dev-backend        # Go backend on :8080
@@ -38,25 +39,30 @@ make dst-install        # Download via DepotDownloader
 
 ### Backend (`backend/`)
 
-- **Entry**: `cmd/server/main.go` - starts server, reconciles Docker state on startup, starts auto-backup/discord services
+- **Entry**: `cmd/server/main.go` - starts server, auto-detects mode (native on Windows, docker on macOS/Linux), reconciles state on startup
+- **Entry**: `cmd/tray/main.go` - system tray app (Windows/macOS), manages server process lifecycle
 - **`internal/api/`** - HTTP handlers and Chi router
-  - `router.go` - route definitions, JWT auth middleware, embedded frontend SPA serving
+  - `router.go` - route definitions, JWT auth middleware, embedded frontend SPA serving, Handler with ShardManager interface
   - `auth.go` - login endpoint + JWT middleware (token in Authorization header or ?token= for WebSocket)
-  - `handler_cluster.go` - cluster CRUD, import (zip with auto root detection), clone
+  - `handler_cluster.go` - cluster CRUD, import (zip with auto root detection), clone, port config (GET/PUT /ports), auto port assignment
   - `handler_container.go` - start/stop/restart with token validation and Discord notifications
-  - `handler_console.go` - send Lua commands to running server via `docker exec` + `/proc/1/fd/0`
-  - `handler_logs.go` - WebSocket log/stats streaming via `stdcopy`
+  - `handler_console.go` - send Lua commands to running server via ShardManager
+  - `handler_logs.go` - WebSocket log/stats streaming
   - `handler_mod.go` - mod list/update (writes modoverrides.lua + mods_setup.lua)
   - `handler_files.go` - read/write config files (whitelisted paths + allowed extensions)
   - `handler_backup.go` - stream cluster as zip download
   - `handler_players.go` - parse server logs for join/leave/chat/death events
-  - `handler_image.go` - Docker image status, DST update via DepotDownloader
-- **`internal/docker/`** - Docker SDK wrapper
+  - `handler_image.go` - DST install status, update via DepotDownloader (auto-download on Windows), branch selection
+- **`internal/manager/`** - ShardManager interface abstraction
+  - `manager.go` - `ShardManager` interface (StartShard, StopShard, ExecCommand, StreamLogs, etc.)
+  - `docker.go` - Docker adapter wrapping `docker.Manager`
+  - `process.go` - Native process manager (Windows) — runs DST as OS processes with stdin/stdout pipes
+- **`internal/docker/`** - Docker SDK wrapper (used by DockerManager)
   - Container lifecycle with `AttachStdin`/`OpenStdin` for console commands
   - `ExecCommand()` writes to `/proc/1/fd/0` with proper shell quoting
   - `ListRunningShards()` for status reconciliation on startup
 - **`internal/dst/`** - DST config file I/O
-  - `cluster.go` - cluster.ini read/write, InitClusterDir with optional caves
+  - `cluster.go` - cluster.ini read/write, InitClusterDir with optional caves, ReadMasterPort/WriteMasterPort, ReadShardPort/WriteShardPort
   - `modoverrides.go` - parse/generate modoverrides.lua (handles real-world multi-line format)
   - `templates.go` - full leveldataoverride.lua templates for Master and Caves
 - **`internal/config/`** - config.json with auth, backup interval, discord webhook
@@ -134,7 +140,9 @@ GET    /api/clusters/{id}/shards/{shard}/stats # WebSocket CPU/mem
 POST   /api/clusters/{id}/shards/{shard}/console # Send Lua command
 GET    /api/image/status                       # DST install status
 POST   /api/image/build                        # Build Docker image
-POST   /api/dst/update                         # Update DST (macOS)
+GET    /api/clusters/{id}/ports                # Get shard ports + master_port
+PUT    /api/clusters/{id}/ports                # Update ports (with conflict check)
+POST   /api/dst/update                         # Update DST (?branch= for beta)
 ```
 
 ## Apple Silicon Notes
